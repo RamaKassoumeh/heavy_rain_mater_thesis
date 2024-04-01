@@ -4,6 +4,9 @@ from datetime import datetime
 import numpy as np
 import os
 
+
+min_value=-999.0 
+max_value=996.411
 # Define the ranges and corresponding colors
 ranges = [
     (-999, -0.1, 'white'),
@@ -41,7 +44,7 @@ cmap = plt.cm.colors.ListedColormap([map_value_to_color(value) for value in np.l
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
 
-def plot_images(image_list, row, col, epoch, batch_num, name):
+def plot_images(image_list, row, col, epoch, batch_num, name,folder_name):
     # Create a figure and divide it into two areas
     fig = plt.figure(figsize=(12, 6))  # Set overall figure size
     gs = fig.add_gridspec(1, 2, width_ratios=[5, 1])  # Divide into two areas, one with 3 times width
@@ -83,7 +86,7 @@ def plot_images(image_list, row, col, epoch, batch_num, name):
     ax_grid = inner_grid.flatten()
 
     for i in range(len(image_list)):
-        image = image_list[i]
+        image = ((image_list[i])*(max_value - min_value))+min_value
         image = image.detach().cpu().numpy()
         ax_grid[i].imshow(image, cmap=cmap, vmin=-999, vmax=1000)  # Assuming grayscale images
         ax_grid[i].axis('off')
@@ -96,8 +99,26 @@ def plot_images(image_list, row, col, epoch, batch_num, name):
             ax_grid[i].set_title(f't +5 mins (predict)')
     plt.tight_layout()
     # plt.show()
-    isExist = os.path.exists(f"output/image_radar_trainer_128_128_30M_filter_data_{timestamp}")
+    isExist = os.path.exists(f"output/{folder_name}_{timestamp}")
     if not isExist:
-        os.mkdir(f"output/image_radar_trainer_128_128_30M_filter_data_{timestamp}") 
+        os.mkdir(f"output/{folder_name}_{timestamp}") 
 
-    plt.savefig(f"output/image_radar_trainer_128_128_30M_filter_data_{timestamp}/{name}_{epoch}_{batch_num}")
+    plt.savefig(f"output/{folder_name}_{timestamp}/{name}_{epoch}_{batch_num}")
+
+
+
+# def plot_images2(image_list, row, col,epoch,batch_num,name):
+#     fig, axes = plt.subplots(row, col, figsize=(12, 6))
+#     for i in range(row):
+#         for j in range(col):
+#             image=image_list[i * col + j]
+#             image = image.detach().cpu().numpy()
+#             image = (image*100) # multiply by the max value
+#             axes[i, j].imshow(image*100)
+#             axes[i, j].axis('off')
+#     plt.subplots_adjust(wspace=0.1, hspace=0.1)  # Adjust spacing between subplots
+#     isExist = os.path.exists(f"output/image_radar_trainer_128_128_30M_filter_data_{timestamp}")
+#     if not isExist:
+#         os.mkdir(f"output/image_radar_trainer_128_128_30M_filter_data_{timestamp}") 
+
+#     plt.savefig(f"output/image_radar_trainer_128_128_30M_filter_data_{timestamp}/{name}_{epoch}_{batch_num}")

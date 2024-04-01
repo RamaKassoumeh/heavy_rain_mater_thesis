@@ -156,3 +156,4 @@ class Seq2Seq(nn.Module):
         # output = self.upsample(output)
 
         return nn.Sigmoid()(output)
+        # return nn.LeakyReLU()(output)

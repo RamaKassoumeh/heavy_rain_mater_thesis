@@ -19,8 +19,10 @@ import glob
 from PIL import Image
 import io
 
-# from torchvision import transforms
 
+
+# from torchvision import transforms
+import numpy as np
 
 # import imageio
 # from ipywidgets import widgets, HBox
@@ -56,31 +58,15 @@ validate_data = RadarFilterImageDataset(
 
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
-# def plot_images2(image_list, row, col,epoch,batch_num,name):
-#     fig, axes = plt.subplots(row, col, figsize=(12, 6))
-#     for i in range(row):
-#         for j in range(col):
-#             image=image_list[i * col + j]
-#             image = image.detach().cpu().numpy()
-#             image = (image*100) # multiply by the max value
-#             axes[i, j].imshow(image*100)
-#             axes[i, j].axis('off')
-#     plt.subplots_adjust(wspace=0.1, hspace=0.1)  # Adjust spacing between subplots
-#     isExist = os.path.exists(f"output/image_radar_trainer_128_128_30M_filter_data_{timestamp}")
-#     if not isExist:
-#         os.mkdir(f"output/image_radar_trainer_128_128_30M_filter_data_{timestamp}") 
-
-#     plt.savefig(f"output/image_radar_trainer_128_128_30M_filter_data_{timestamp}/{name}_{epoch}_{batch_num}")
-
 train_dataloader = DataLoader(
     dataset=train_dataset,
-    batch_size=4,
+    batch_size=32,
     shuffle=True
 )
 
 validate_loader = DataLoader(
     dataset=validate_data,
-    batch_size=4,
+    batch_size=32,
     shuffle=True
 )
 
@@ -92,7 +78,7 @@ validate_loader = DataLoader(
 # The input video frames are grayscale, thus single channel
 model = Seq2Seq(num_channels=1, num_kernels=64,
                 kernel_size=(3, 3), padding=(1, 1), activation="relu",
-                frame_size=(268, 268), num_layers=3)
+                frame_size=(10, 10), num_layers=3)
 
 model=torch.nn.DataParallel(model)
 model.cuda()
@@ -106,10 +92,10 @@ scheduler = torch.optim.lr_scheduler.MultiStepLR(optim, milestones=[10,6,4], gam
 criterion = nn.MSELoss()
 num_epochs = 20
 
-
+folder_name='radar_trainer_128_128_30M_MSE_filter_data_4_layers'
 # Initializing in a separate cell, so we can easily add more epochs to the same run
 
-writer = SummaryWriter('runs/radar_trainer_128_128_30M_MSE_filter_data_{}'.format(timestamp))
+writer = SummaryWriter(f'runs/{folder_name}_{timestamp}')
 
 for epoch in range(1, num_epochs + 1):
 
@@ -118,23 +104,24 @@ for epoch in range(1, num_epochs + 1):
     total =0
     model.train()
     for batch_num, (input, target) in enumerate(train_dataloader, 1):
-        optim.zero_grad()
+        # optim.zero_grad()
         output = model(input.float())
-        loss = criterion(output.flatten(), target.flatten())
+        loss = criterion(output.flatten(), target.flatten().float())
         loss.backward()
         optim.step()
-        # optim.zero_grad()
+        optim.zero_grad()
         train_loss += loss.item()
-        acc += (output.flatten() -target.flatten()<=0.01).sum().item()
-        total += target.size(0)
-        print(f"the accurecy is {acc}")
+        # acc += (output.flatten() -target.flatten()<=0.01).sum().item()
+        # total += target.size(0)
+        # print(f"the accurecy is {acc}")
         # print(f"the train loss is {train_loss}")
         print(f"batch number={batch_num} in epoch {epoch}")
-    plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train')
-    print('Accuracy of the network : %.2f %%' % (100 * acc / total))
+        if batch_num%100 ==0:
+            plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',folder_name)
+    # print('Accuracy of the network : %.2f %%' % (100 * acc / total))
 
     train_loss /= len(train_dataloader.dataset)
-    acc /= len(train_dataloader.dataset)
+    # acc /= len(train_dataloader.dataset)
     # train_loss /= 128
     print(f"the train loss is {train_loss}")
     val_loss = 0
@@ -144,9 +131,7 @@ for epoch in range(1, num_epochs + 1):
             output = model(input)
             loss = criterion(output.flatten(), target.flatten())
             val_loss += loss.item()
-            # plot_images([input[0,0,input.shape[2]-6],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-1] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'validate')
-            # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3] ,input[0,0,input.shape[2]-4] ,input[0,0,input.shape[2]-5] ,input[0,0,input.shape[2]-6]  ,target[0][0] ,output[0][0] ], 2, 4,epoch,batch_num,'validate')
-    plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3] ,input[0,0,input.shape[2]-4] ,input[0,0,input.shape[2]-5] ,input[0,0,input.shape[2]-6]  ,target[0][0] ,output[0][0] ], 2, 4,epoch,batch_num,'validate')
+    plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3] ,input[0,0,input.shape[2]-4] ,input[0,0,input.shape[2]-5] ,input[0,0,input.shape[2]-6]  ,target[0][0] ,output[0][0] ], 2, 4,epoch,batch_num,'validate',folder_name)
     val_loss /= len(validate_loader.dataset)
     # val_loss /= 128
     print(f"the validate loss is {val_loss}")
@@ -155,8 +140,8 @@ for epoch in range(1, num_epochs + 1):
 
     # Log the running loss averaged per batch
     # for both training and validation
-    writer.add_scalars('Training vs. Validation Loss and accurecy',
-                       {'Training': train_loss, 'Validation': val_loss, 'Validation': acc},
+    writer.add_scalars('Training vs. Validation Loss',
+                       {'Training': train_loss, 'Validation': val_loss},
                        epoch)
     writer.flush()
 

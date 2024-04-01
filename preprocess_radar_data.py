@@ -41,14 +41,15 @@ def check_conditions(event_persentage,event_max_precipitation,current_event_no,r
     if check_previous_files_exist(radar_file):
         if event_persentage>=threshold_persentage or event_max_precipitation>=max_threshold_persentage:
             accepted_events.append(current_event_no)
-        elif event_persentage<threshold_persentage and zero_counter/total_files*100<=zero_persentage:
-            accepted_events.append(current_event_no)
-            zero_counter=zero_counter+1
+        # elif event_persentage<threshold_persentage and zero_counter/total_files*100<=zero_persentage:
+        #     accepted_events.append(current_event_no)
+        #     zero_counter=zero_counter+1
 
 train_data = '../RadarData/'
 validate_data = '../RadarData_validate/'
 
-
+min_value=0
+max_value=0
 
 
 
@@ -57,7 +58,10 @@ def process_data(radar_data_folder_path):
     index=0
     total_files = 0
     global zero_counter
+    global min_value
+    global max_value
     zero_counter=0
+    
     for root, dirs, files in os.walk(radar_data_folder_path):
         total_files += len(files)
     for radar_folders in sorted(os.listdir(radar_data_folder_path)):
@@ -80,8 +84,10 @@ def process_data(radar_data_folder_path):
                     gain_rate=dataset_DXk.get('what').attrs["gain"]
                     ds_arr = dataset_DXk.get('image')[:]  # the image data in an array of floats
                     # ds_arr = np.where(ds_arr == -999, 0, ds_arr)
-                    ds_arr = ds_arr * gain_rate
+                    ds_arr = np.where(ds_arr >0, ds_arr * gain_rate, ds_arr)
                     # ds_arr = np.where(ds_arr > 100, 100, ds_arr)
+                    min_value=min(np.min(ds_arr),min_value)
+                    max_value=max(np.max(ds_arr),max_value)
                     file.close()
                     percentage=(np.count_nonzero(ds_arr>0)/ ds_arr.size) * 100
                     max_precipitation=np.max(ds_arr)
@@ -115,5 +121,9 @@ def process_data(radar_data_folder_path):
 #     percentage=(np.count_nonzero(ds_arr)/ ds_arr.size) * 100
 #     max_precipitation=np.max(ds_arr)
 #     check_conditions(percentage,max_precipitation,1,"../RadarData/230825/hd2308250320.scu",300)
+
 process_data(train_data)
 process_data(validate_data)
+
+print(min_value)
+print(max_value)

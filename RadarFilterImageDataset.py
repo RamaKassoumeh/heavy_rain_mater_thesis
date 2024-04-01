@@ -18,7 +18,8 @@ class RadarFilterImageDataset(Dataset):
         self.transform = transform
         self.mean=0.129
         self.std=0.857
-        self.max_value=100
+        self.max_value=996.411
+        self.min_value=-999.0 
 
         # Walk through all directories and files
         for radar_folders in sorted(os.listdir(self.img_dir)):
@@ -34,7 +35,8 @@ class RadarFilterImageDataset(Dataset):
         self.radar_data_array=np.load(img_dir+'/radar_data_array.npy')
 
     def __len__(self):
-        return self.radar_data_array.__len__()-6
+
+        return self.radar_data_array.__len__()
 
     def read_radar_image(self,indx):
         try:
@@ -51,9 +53,11 @@ class RadarFilterImageDataset(Dataset):
             # print((np.count_nonzero(ds_arr)/ ds_arr.size) * 100)
             gain_rate=dataset_DXk.get('what').attrs["gain"]
             ds_arr = np.where(ds_arr >0, ds_arr * gain_rate, ds_arr)
+            ds_arr=np.round(ds_arr,3)
             # ds_arr = ds_arr * gain_rate
-            # Convert the 2D array to a PIL Image
-            
+            # Normalize data
+            ds_arr=(ds_arr - self.min_value) / (self.max_value - self.min_value)
+             # Convert the 2D array to a PIL Image           
             image = Image.fromarray(ds_arr)
             # resized_image = image.resize((128, 128))
             resized_image = image.resize((268, 268),PIL.Image.NEAREST )
@@ -62,7 +66,7 @@ class RadarFilterImageDataset(Dataset):
             resized_image = np.array(resized_image)
             # resized_image=self.transform(resized_image)
             file.close()        
-            return resized_image
+            return  np.array(ds_arr[268:278,268:278])
         except Exception as e:
             print(e)
             print(img_path)
