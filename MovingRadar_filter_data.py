@@ -41,7 +41,7 @@ std=0.9829
 transform = transforms.Compose([
     transforms.ToTensor(),
     # transforms.Lambda(lambda x: x.unsqueeze(0))  ,# Add a new dimension at position 0
-    transforms.Lambda(lambda x: x.cuda()) , # send data to cuda
+    # transforms.Lambda(lambda x: x.cuda()) , # send data to cuda
     # transforms.Normalize(mean=[mean,],
     #                          std=[std,],)
     transforms.Lambda(lambda x: (x-min_value)/(max_value-min_value)),
@@ -49,11 +49,12 @@ transform = transforms.Compose([
 ])
 inverseTransform= transforms.Compose([
     # transforms.Lambda(lambda x: x.unsqueeze(0))  ,# Add a new dimension at position 0
-    transforms.Lambda(lambda x: x.cuda()) , # send data to cuda
+    # transforms.Lambda(lambda x: x.cuda()) , # send data to cuda
     # transforms.Normalize(mean=[-mean/std,],
                             #  std=[1/std,])
-    transforms.Lambda(lambda x: (x*(max_value - min_value))+min_value),
-    transforms.Lambda(lambda x: torch.pow(2, x)-1)
+    transforms.Lambda(lambda x: torch.pow(2, x)-1),
+    transforms.Lambda(lambda x: (x*(max_value - min_value))+min_value)
+    
 ])
 
 

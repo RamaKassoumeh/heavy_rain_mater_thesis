@@ -90,18 +90,18 @@ class RadarFilterImageDataset(Dataset):
         resized_radar_array=np.stack(resized_radar_array, axis=2)
         # Add channel dim, scale pixels between 0 and 1, send to GPU
         # batch = torch.tensor(resized_radar_array).unsqueeze(0)
-        # batch = batch.cuda()
+        
         # label = torch.tensor(label_image).unsqueeze(0)
         batch = self.transform(resized_radar_array)
         batch = batch.unsqueeze(0)
         label=self.transform(label_image)
-
-        # label=label.cuda()
+        batch = batch.cuda()
+        label=label.cuda()
         if self.return_original==True:
             original_label_image=self.read_radar_image(self.radar_data_array[idx],True)
-            original_label=self.transform(original_label_image)
-            # original_label = torch.tensor(original_label_image).unsqueeze(0)
-            # original_label=original_label.cuda()
+            # original_label=self.transform(original_label_image)
+            original_label = torch.tensor(original_label_image).unsqueeze(0)
+            original_label=original_label.cuda()
             return batch,label,original_label
         return batch, label
     
