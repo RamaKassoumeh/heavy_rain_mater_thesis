@@ -21,7 +21,7 @@ import io
 
 
 
-# from torchvision import transforms
+from torchvision import transforms
 import numpy as np
 
 # import imageio
@@ -33,40 +33,53 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(device)
 # Load Data as Numpy Array
 # MovingMNIST = np.load('mnist_test_seq.npy').transpose(1, 0, 2, 3)
-
-# mean = 0.11872672
-# std = 0.194747557
-mean=0.129
-std=0.857
-
+min_value=0
+max_value=200
+mean=0.21695
+std=0.9829
 # make transforms
-# transform = transforms.Compose([
-#     transforms.ToTensor()
-#     , transforms.Normalize((0.11872672,), (0.194747557,))
-# ])
+transform = transforms.Compose([
+    transforms.ToTensor(),
+    # transforms.Lambda(lambda x: x.unsqueeze(0))  ,# Add a new dimension at position 0
+    transforms.Lambda(lambda x: x.cuda()) , # send data to cuda
+    # transforms.Normalize(mean=[mean,],
+    #                          std=[std,],)
+    transforms.Lambda(lambda x: (x-min_value)/(max_value-min_value)),
+    transforms.Lambda(lambda x: torch.log2(x+1).float()),
+])
+inverseTransform= transforms.Compose([
+    # transforms.Lambda(lambda x: x.unsqueeze(0))  ,# Add a new dimension at position 0
+    transforms.Lambda(lambda x: x.cuda()) , # send data to cuda
+    # transforms.Normalize(mean=[-mean/std,],
+                            #  std=[1/std,])
+    transforms.Lambda(lambda x: (x*(max_value - min_value))+min_value),
+    transforms.Lambda(lambda x: torch.pow(2, x)-1)
+])
 
 
 train_dataset = RadarFilterImageDataset(
     img_dir='../RadarData/',
-    transform=None
+    transform=transform,
+    inverse_transform=inverseTransform
 )
 
 validate_data = RadarFilterImageDataset(
     img_dir='../RadarData_validate/',
-    transform=None
+    transform=transform,
+    inverse_transform=inverseTransform
 )
 
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
 train_dataloader = DataLoader(
     dataset=train_dataset,
-    batch_size=32,
+    batch_size=8,
     shuffle=True
 )
 
 validate_loader = DataLoader(
     dataset=validate_data,
-    batch_size=32,
+    batch_size=8,
     shuffle=True
 )
 
@@ -78,7 +91,7 @@ validate_loader = DataLoader(
 # The input video frames are grayscale, thus single channel
 model = Seq2Seq(num_channels=1, num_kernels=64,
                 kernel_size=(3, 3), padding=(1, 1), activation="relu",
-                frame_size=(10, 10), num_layers=3)
+                frame_size=(250, 280), num_layers=3)
 
 model=torch.nn.DataParallel(model)
 model.cuda()
@@ -92,7 +105,7 @@ scheduler = torch.optim.lr_scheduler.MultiStepLR(optim, milestones=[10,6,4], gam
 criterion = nn.MSELoss()
 num_epochs = 20
 
-folder_name='radar_trainer_128_128_30M_MSE_filter_data_4_layers'
+folder_name='radar_trainer_30M_MSE_filter_data_268_size'
 # Initializing in a separate cell, so we can easily add more epochs to the same run
 
 writer = SummaryWriter(f'runs/{folder_name}_{timestamp}')
@@ -104,12 +117,12 @@ for epoch in range(1, num_epochs + 1):
     total =0
     model.train()
     for batch_num, (input, target) in enumerate(train_dataloader, 1):
-        # optim.zero_grad()
-        output = model(input.float())
-        loss = criterion(output.flatten(), target.flatten().float())
+        optim.zero_grad()
+        output = model(input)
+        loss = criterion(output.flatten(), target.flatten())
         loss.backward()
         optim.step()
-        optim.zero_grad()
+        # optim.zero_grad()
         train_loss += loss.item()
         # acc += (output.flatten() -target.flatten()<=0.01).sum().item()
         # total += target.size(0)
@@ -117,6 +130,9 @@ for epoch in range(1, num_epochs + 1):
         # print(f"the train loss is {train_loss}")
         print(f"batch number={batch_num} in epoch {epoch}")
         if batch_num%100 ==0:
+            target=inverseTransform(target)
+            input=inverseTransform(input)
+            output=inverseTransform(output)
             plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',folder_name)
     # print('Accuracy of the network : %.2f %%' % (100 * acc / total))
 
@@ -131,6 +147,9 @@ for epoch in range(1, num_epochs + 1):
             output = model(input)
             loss = criterion(output.flatten(), target.flatten())
             val_loss += loss.item()
+    target=inverseTransform(target)
+    input=inverseTransform(input)
+    output=inverseTransform(output)
     plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3] ,input[0,0,input.shape[2]-4] ,input[0,0,input.shape[2]-5] ,input[0,0,input.shape[2]-6]  ,target[0][0] ,output[0][0] ], 2, 4,epoch,batch_num,'validate',folder_name)
     val_loss /= len(validate_loader.dataset)
     # val_loss /= 128

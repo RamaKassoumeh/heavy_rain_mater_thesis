@@ -45,6 +45,9 @@ max_precipitation_array=[]
 max_precipitation_array_persentage=[]
 threshold=30
 max_threshold=50
+image_with_outliers=0
+total_image_count=0
+total_nan_count=0
 for radar_folders in sorted(os.listdir(radar_data_folder_path)):
     # Construct the full path to the folder
     folder_path = os.path.join(radar_data_folder_path, radar_folders)
@@ -65,17 +68,21 @@ for radar_folders in sorted(os.listdir(radar_data_folder_path)):
             
             dates_array.append(datetime_obj)
             with h5py.File(radar_file, 'a') as file:
+                total_image_count+=1
                 a_group_key = list(file.keys())[0]
                 dataset_DXk = file.get(a_group_key)
                 ds_arr = dataset_DXk.get('image')[:]  # the image data in an array of floats
-                ds_arr = np.where(ds_arr == -999, 0, ds_arr)
+                # ds_arr = np.where(ds_arr == -999, 0, ds_arr)
                 gain_rate=dataset_DXk.get('what').attrs["gain"]
                 ds_arr = ds_arr * gain_rate
 
                 percentage=(np.count_nonzero(ds_arr)/ ds_arr.size) * 100
                 max_precipitation_array.append(np.max(ds_arr))
-                max_precipitation_array_persentage.append((np.count_nonzero(ds_arr>100)/ ds_arr.size) * 100)
-
+                max_precipitation_array_persentage.append((np.count_nonzero(ds_arr>200)/ ds_arr.size) * 100)
+                if np.max(ds_arr)>200:
+                    image_with_outliers+=1
+                if (np.count_nonzero(ds_arr<0)/ ds_arr.size) * 100 >36:
+                    total_nan_count+=1
                 # max_precipitation_array.append((np.count_nonzero(ds_arr>100)/ ds_arr.size) * 100)
                 percentage_array.append(percentage)
                 # check_prev_frames(percentage,datetime_obj,len(percentage_array)-1)
@@ -154,3 +161,5 @@ for radar_folders in sorted(os.listdir(radar_data_folder_path)):
 
             max_precipitation_array_persentage.clear()
 
+print(image_with_outliers/total_image_count*100)
+print(total_nan_count/total_image_count*100)

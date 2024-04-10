@@ -88,7 +88,8 @@ class ConvLSTM(nn.Module):
         # Initialize Cell Input
         C = torch.zeros(batch_size, self.out_channels,
                         height, width, device=device)
-
+        # nn.init.xavier_normal_(H)
+        # nn.init.xavier_normal_(C)
         # Unroll over time steps
         for time_step in range(seq_len):
             H, C = self.convLSTMcell(X[:, :, time_step], H, C)
@@ -157,3 +158,4 @@ class Seq2Seq(nn.Module):
 
         return nn.Sigmoid()(output)
         # return nn.LeakyReLU()(output)
+        # return nn.Tanh()(output)

@@ -5,8 +5,10 @@ import numpy as np
 import os
 
 
-min_value=-999.0 
-max_value=996.411
+# min_value=-999.0 
+min_value=0
+max_value=200
+# max_value=996.411
 # Define the ranges and corresponding colors
 ranges = [
     (-999, -0.1, 'white'),
@@ -86,8 +88,13 @@ def plot_images(image_list, row, col, epoch, batch_num, name,folder_name):
     ax_grid = inner_grid.flatten()
 
     for i in range(len(image_list)):
-        image = ((image_list[i])*(max_value - min_value))+min_value
+        # image = image_list[i]
+
+        # image = ((image_list[i])*(max_value - min_value))+min_value
+        image=image_list[i]
         image = image.detach().cpu().numpy()
+        image = np.where(image < 0, -999, image)
+
         ax_grid[i].imshow(image, cmap=cmap, vmin=-999, vmax=1000)  # Assuming grayscale images
         ax_grid[i].axis('off')
         if i < 6: 
@@ -104,6 +111,7 @@ def plot_images(image_list, row, col, epoch, batch_num, name,folder_name):
         os.mkdir(f"output/{folder_name}_{timestamp}") 
 
     plt.savefig(f"output/{folder_name}_{timestamp}/{name}_{epoch}_{batch_num}")
+    plt.close()
 
 
 

@@ -41,9 +41,12 @@ def check_conditions(event_persentage,event_max_precipitation,current_event_no,r
     if check_previous_files_exist(radar_file):
         if event_persentage>=threshold_persentage or event_max_precipitation>=max_threshold_persentage:
             accepted_events.append(current_event_no)
+            return True
+        
         # elif event_persentage<threshold_persentage and zero_counter/total_files*100<=zero_persentage:
         #     accepted_events.append(current_event_no)
         #     zero_counter=zero_counter+1
+    return False
 
 train_data = '../RadarData/'
 validate_data = '../RadarData_validate/'
@@ -61,9 +64,11 @@ def process_data(radar_data_folder_path):
     global min_value
     global max_value
     zero_counter=0
-    
-    for root, dirs, files in os.walk(radar_data_folder_path):
-        total_files += len(files)
+    means = []
+    variances = []
+    total_sum=0
+    total_sum_square=0
+    count=0
     for radar_folders in sorted(os.listdir(radar_data_folder_path)):
         # Construct the full path to the folder
         folder_path = os.path.join(radar_data_folder_path, radar_folders)
@@ -83,23 +88,43 @@ def process_data(radar_data_folder_path):
                     dataset_DXk = file.get(a_group_key)
                     gain_rate=dataset_DXk.get('what').attrs["gain"]
                     ds_arr = dataset_DXk.get('image')[:]  # the image data in an array of floats
-                    # ds_arr = np.where(ds_arr == -999, 0, ds_arr)
                     ds_arr = np.where(ds_arr >0, ds_arr * gain_rate, ds_arr)
+
+                    if np.max(ds_arr)>200:
+                        file.close()
+                        continue
+                    ds_arr=ds_arr[110:360,110:390]
+                    ds_arr = np.where(ds_arr == -999, 0, ds_arr)
                     # ds_arr = np.where(ds_arr > 100, 100, ds_arr)
                     min_value=min(np.min(ds_arr),min_value)
                     max_value=max(np.max(ds_arr),max_value)
+                    
                     file.close()
                     percentage=(np.count_nonzero(ds_arr>0)/ ds_arr.size) * 100
                     max_precipitation=np.max(ds_arr)
                     max_precipitation_persentage=(np.count_nonzero(ds_arr>max_threshold)/ ds_arr.size) * 100
-                    check_conditions(percentage,max_precipitation_persentage,index,radar_file,total_files)
+                    added_to_list=check_conditions(percentage,max_precipitation_persentage,index,radar_file,total_files)
+                    if added_to_list:
+                        total_sum += ds_arr.sum()
+                        total_sum_square += (ds_arr ** 2).sum()
+                        means.append(np.mean(ds_arr, axis=0))
+                        count+=1
                     # flattened_arrays.append(ds_arr.flatten())
                     index+=1
                     print(radar_file)
                     
     # Concatenate all the flattened arrays together
     # combined_array = np.concatenate(flattened_arrays)
-    # print(f"the mean is {combined_array.mean()}")
+    print(f"the mean is {np.mean(means)}")
+    # mean and std
+    count=count*ds_arr.shape[0]*ds_arr.shape[1]
+    total_mean = total_sum / count
+    total_var  = (total_sum_square / count) - (total_mean ** 2)
+    total_std  = np.sqrt(total_var)
+
+    # output
+    print('mean: '  + str(total_mean))
+    print('std:  '  + str(total_std))
     # print(f"the std is {combined_array.std()}")
     # print(f"the max is {np.max(combined_array)}")
     # print(f"count of data points have error is {(np.count_nonzero(combined_array>100)/ combined_array.size) * 100}")
@@ -122,8 +147,25 @@ def process_data(radar_data_folder_path):
 #     max_precipitation=np.max(ds_arr)
 #     check_conditions(percentage,max_precipitation,1,"../RadarData/230825/hd2308250320.scu",300)
 
-process_data(train_data)
+# process_data(train_data)
+total_sum=0
+total_sum_square=0
+count=0
 process_data(validate_data)
 
 print(min_value)
 print(max_value)
+
+# train data with cropping results
+# the mean is 0.21695113269127725
+# mean: 0.21695113269127766
+# std:  0.9829045831795907
+# number of accepted events: 37851
+# count of all events: 104281
+
+# validate data with cropping results
+#the mean is 0.2173834820793326
+# mean: 0.2173834820793333
+# std:  0.6638427224076925
+# number of accepted events: 3861
+# count of all events: 8928
