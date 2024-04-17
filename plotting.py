@@ -11,7 +11,7 @@ max_value=200
 # max_value=996.411
 # Define the ranges and corresponding colors
 ranges = [
-    (-999, -0.1, 'white'),
+    (-999, -0.01, 'white'),
     (0, 0.06, 'lightgrey'),
     (0.06, 0.12, 'cyan'),
     (0.12, 0.21, 'dodgerblue'),

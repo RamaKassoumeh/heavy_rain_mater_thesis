@@ -20,7 +20,7 @@ class RadarFilterImageDataset(Dataset):
         self.inverse_transform=inverse_transform
         self.mean=0.129
         self.std=0.857
-        self.max_value=200
+        self.max_value=10
         # self.max_value=996.411
         self.min_value=0
         # self.min_value=-999.0 
@@ -81,7 +81,7 @@ class RadarFilterImageDataset(Dataset):
     def __getitem__(self, idx):
         resized_radar_array=[]  
         # read 6 frames as input (0.5 hours), the current is the target
-        for i in range(1,7):         
+        for i in range(1,3):         
             resized_image=self.read_radar_image(self.radar_data_array[idx]-i)
             resized_radar_array.append(resized_image)
 
@@ -93,7 +93,8 @@ class RadarFilterImageDataset(Dataset):
         
         # label = torch.tensor(label_image).unsqueeze(0)
         batch = self.transform(resized_radar_array)
-        batch = batch.unsqueeze(0)
+        # batch = batch.unsqueeze(0)
+        batch = batch.unsqueeze(1)
         label=self.transform(label_image)
         batch = batch.cuda()
         label=label.cuda()

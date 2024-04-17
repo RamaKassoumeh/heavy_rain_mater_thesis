@@ -44,19 +44,22 @@ transform = transforms.Compose([
     # transforms.Lambda(lambda x: x.cuda()) , # send data to cuda
     # transforms.Normalize(mean=[mean,],
     #                          std=[std,],)
-    transforms.Lambda(lambda x: (x-min_value)/(max_value-min_value)),
-    transforms.Lambda(lambda x: torch.log2(x+1).float()),
+    # transforms.Lambda(lambda x: (x-min_value)/(max_value-min_value)),
+    # transforms.Lambda(lambda x: torch.log2(x+1))
+    transforms.Lambda(lambda x:  (torch.log(x+1) / torch.log(torch.tensor(10.0))).float()),
+    transforms.Lambda(lambda x: x.float())
+    
 ])
 inverseTransform= transforms.Compose([
     # transforms.Lambda(lambda x: x.unsqueeze(0))  ,# Add a new dimension at position 0
     # transforms.Lambda(lambda x: x.cuda()) , # send data to cuda
     # transforms.Normalize(mean=[-mean/std,],
                             #  std=[1/std,])
-    transforms.Lambda(lambda x: torch.pow(2, x)-1),
-    transforms.Lambda(lambda x: (x*(max_value - min_value))+min_value)
+    transforms.Lambda(lambda x: torch.pow(10, x)-1),
+    # transforms.Lambda(lambda x: (x*(max_value - min_value))+min_value)
+    transforms.Lambda(lambda x: x)
     
 ])
-
 
 train_dataset = RadarFilterImageDataset(
     img_dir='../RadarData/',
@@ -92,7 +95,7 @@ validate_loader = DataLoader(
 # The input video frames are grayscale, thus single channel
 model = Seq2Seq(num_channels=1, num_kernels=64,
                 kernel_size=(3, 3), padding=(1, 1), activation="relu",
-                frame_size=(250, 280), num_layers=3)
+                frame_size=(250, 280), num_layers=6)
 
 model=torch.nn.DataParallel(model)
 model.cuda()
@@ -106,7 +109,7 @@ scheduler = torch.optim.lr_scheduler.MultiStepLR(optim, milestones=[10,6,4], gam
 criterion = nn.MSELoss()
 num_epochs = 20
 
-folder_name='radar_trainer_30M_MSE_filter_data_268_size'
+folder_name='radar_trainer_10M_MSE_filter_data_250_size'
 # Initializing in a separate cell, so we can easily add more epochs to the same run
 
 writer = SummaryWriter(f'runs/{folder_name}_{timestamp}')
@@ -134,7 +137,8 @@ for epoch in range(1, num_epochs + 1):
             target=inverseTransform(target)
             input=inverseTransform(input)
             output=inverseTransform(output)
-            plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',folder_name)
+            # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',folder_name)
+            plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',folder_name)
     # print('Accuracy of the network : %.2f %%' % (100 * acc / total))
 
     train_loss /= len(train_dataloader.dataset)
@@ -151,7 +155,9 @@ for epoch in range(1, num_epochs + 1):
     target=inverseTransform(target)
     input=inverseTransform(input)
     output=inverseTransform(output)
-    plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3] ,input[0,0,input.shape[2]-4] ,input[0,0,input.shape[2]-5] ,input[0,0,input.shape[2]-6]  ,target[0][0] ,output[0][0] ], 2, 4,epoch,batch_num,'validate',folder_name)
+    # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3] ,input[0,0,input.shape[2]-4] ,input[0,0,input.shape[2]-5] ,input[0,0,input.shape[2]-6]  ,target[0][0] ,output[0][0] ], 2, 4,epoch,batch_num,'validate',folder_name)
+    plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',folder_name)
+
     val_loss /= len(validate_loader.dataset)
     # val_loss /= 128
     print(f"the validate loss is {val_loss}")
