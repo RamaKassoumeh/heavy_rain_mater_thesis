@@ -147,7 +147,7 @@ def process_data(radar_data_folder_path):
 #     max_precipitation=np.max(ds_arr)
 #     check_conditions(percentage,max_precipitation,1,"../RadarData/230825/hd2308250320.scu",300)
 
-# process_data(train_data)
+process_data(train_data)
 total_sum=0
 total_sum_square=0
 count=0
