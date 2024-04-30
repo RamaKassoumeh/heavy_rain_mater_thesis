@@ -95,24 +95,26 @@ transform = transforms.Compose([
     # transforms.Lambda(lambda x: torch.log2(x+1))
     transforms.Lambda(custom_transform1) ,
     transforms.Lambda(custom_transform2) ,
-    transforms.Lambda(lambda x: torch.log(x+1)),
+    # transforms.Lambda(lambda x: torch.log(x+1)),
+     transforms.Lambda(lambda x:  (torch.log(x+1) / torch.log(torch.tensor(max_value))).float()),
     # transforms.Lambda(lambda x: x.float())
     
 ])
 
 def invert_custom_transform1(x):
     # Use PyTorch's where function to apply the transformation element-wise
-    return torch.where(x > 0, x-1, x)
+    return torch.where(x > -0, x-1, x)
 def invert_custom_transform2(x):
     # Use PyTorch's where function to apply the transformation element-wise
-    return torch.where(x <= 0, -999, x) 
+    return torch.where(x <= -0, -999, x) 
 
 inverseTransform= transforms.Compose([
     # transforms.Lambda(lambda x: x.unsqueeze(0))  ,# Add a new dimension at position 0
     # transforms.Lambda(lambda x: x.cuda()) , # send data to cuda
     # transforms.Normalize(mean=[-mean/std,],
                             #  std=[1/std,])
-    transforms.Lambda(lambda x: torch.exp(x)-1),
+    # transforms.Lambda(lambda x: torch.exp(x)-1),
+    transforms.Lambda(lambda x: torch.pow(max_value, x)-1),
     transforms.Lambda(invert_custom_transform2) ,
     transforms.Lambda(invert_custom_transform1) ,
     
