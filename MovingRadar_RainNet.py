@@ -39,6 +39,14 @@ max_value=200
 mean=0.21695
 std=0.9829
 # make transforms
+def custom_transform1(x):
+    # Use PyTorch's where function to apply the transformation element-wise
+    return torch.where(x >= 0, x + 1, x)
+def custom_transform2(x):
+    # Use PyTorch's where function to apply the transformation element-wise
+    return torch.where(x < 0, 0, x)
+
+
 transform = transforms.Compose([
     transforms.ToTensor(),
     # transforms.Lambda(lambda x: x.unsqueeze(0))  ,# Add a new dimension at position 0
@@ -47,16 +55,29 @@ transform = transforms.Compose([
     #                          std=[std,],)
     # transforms.Lambda(lambda x: (x-min_value)/(max_value-min_value)),
     # transforms.Lambda(lambda x: torch.log2(x+1))
+    transforms.Lambda(custom_transform1) ,
+    transforms.Lambda(custom_transform2) ,
     transforms.Lambda(lambda x: torch.log(x+1)),
     # transforms.Lambda(lambda x: x.float())
     
 ])
+
+def invert_custom_transform1(x):
+    # Use PyTorch's where function to apply the transformation element-wise
+    return torch.where(x > -0.1, x-1, x)
+def invert_custom_transform2(x):
+    # Use PyTorch's where function to apply the transformation element-wise
+    return torch.where(x <= -0.1, -999, x) 
+
 inverseTransform= transforms.Compose([
     # transforms.Lambda(lambda x: x.unsqueeze(0))  ,# Add a new dimension at position 0
     # transforms.Lambda(lambda x: x.cuda()) , # send data to cuda
     # transforms.Normalize(mean=[-mean/std,],
                             #  std=[1/std,])
     transforms.Lambda(lambda x: torch.exp(x)-1),
+    transforms.Lambda(invert_custom_transform2) ,
+    transforms.Lambda(invert_custom_transform1) ,
+    
     # transforms.Lambda(lambda x: (x*(max_value - min_value))+min_value)
     # transforms.Lambda(lambda x: x) 
 ])
@@ -116,7 +137,7 @@ scheduler = torch.optim.lr_scheduler.MultiStepLR(optim, milestones=[10,6,4], gam
 criterion = LogCoshLoss()
 num_epochs = 10
 
-folder_name='radar_trainer_30M_RainNet_256_size_1-200_range_log_1'
+folder_name='radar_trainer_30M_RainNet_512_size_log_1'
 # Initializing in a separate cell, so we can easily add more epochs to the same run
 
 writer = SummaryWriter(f'runs/{folder_name}_{timestamp}')

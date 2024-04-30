@@ -22,8 +22,8 @@ class RadarFilterRainNetDataset(Dataset):
         self.std=0.857
         self.max_value=200
         # self.max_value=996.411
-        self.min_value=0
-        # self.min_value=-999.0 
+        # self.min_value=0
+        self.min_value=-999.0 
 
         # Walk through all directories and files
         for radar_folders in sorted(os.listdir(self.img_dir)):
@@ -60,6 +60,7 @@ class RadarFilterRainNetDataset(Dataset):
             ds_arr=np.round(ds_arr,3)
             ds_arr = np.where(ds_arr >self.max_value, self.max_value, ds_arr)
             ds_arr = np.where(ds_arr <self.min_value, self.min_value, ds_arr)
+            # for normalization
             # if return_original==False:
                 # Normalize data
                 # ds_arr=(ds_arr - self.min_value) / (self.max_value - self.min_value)
@@ -72,7 +73,7 @@ class RadarFilterRainNetDataset(Dataset):
             resized_image = np.array(resized_image)
             # resized_image=self.transform(resized_image)
             file.close()        
-            return ds_arr[110:366,110:366]
+            return resized_image# ds_arr[110:366,110:366]
         except Exception as e:
             print(e)
             print(img_path)
