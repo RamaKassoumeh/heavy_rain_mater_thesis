@@ -24,6 +24,7 @@ import io
 
 from torchvision import transforms
 import numpy as np
+from sklearn.metrics import confusion_matrix
 
 # import imageio
 # from ipywidgets import widgets, HBox
@@ -58,17 +59,18 @@ transform = transforms.Compose([
     transforms.Lambda(custom_transform1) ,
     transforms.Lambda(custom_transform2) ,
     # transforms.Lambda(lambda x: torch.log(x+1)),
-     transforms.Lambda(lambda x:  (torch.log(x+1) / torch.log(torch.tensor(max_value))).float()),
+     transforms.Lambda(lambda x:  (torch.log(x+1) / torch.log(torch.tensor(max_value+1))).float()),
     # transforms.Lambda(lambda x: x.float())
     
 ])
 
+
 def invert_custom_transform1(x):
     # Use PyTorch's where function to apply the transformation element-wise
-    return torch.where(x > -0, x-1, x)
+    return torch.where(x > -0.1, x-1, x)
 def invert_custom_transform2(x):
     # Use PyTorch's where function to apply the transformation element-wise
-    return torch.where(x <= -0, -999, x) 
+    return torch.where(x <= -0.1, -999, x) 
 
 inverseTransform= transforms.Compose([
     # transforms.Lambda(lambda x: x.unsqueeze(0))  ,# Add a new dimension at position 0
@@ -76,12 +78,12 @@ inverseTransform= transforms.Compose([
     # transforms.Normalize(mean=[-mean/std,],
                             #  std=[1/std,])
     # transforms.Lambda(lambda x: torch.exp(x)-1),
-    transforms.Lambda(lambda x: torch.pow(max_value, x)-1),
+    transforms.Lambda(lambda x: torch.pow(max_value+1, x)-1),
     transforms.Lambda(invert_custom_transform2) ,
     transforms.Lambda(invert_custom_transform1) ,
-    
+    transforms.Lambda(invert_custom_transform2) ,
     # transforms.Lambda(lambda x: (x*(max_value - min_value))+min_value)
-    # transforms.Lambda(lambda x: x) 
+    transforms.Lambda(lambda x: x) 
 ])
 
 train_dataset = RadarFilterRainNetDataset(
@@ -96,6 +98,13 @@ validate_data = RadarFilterRainNetDataset(
     inverse_transform=inverseTransform
 )
 
+test_data = RadarFilterRainNetDataset(
+    img_dir='../RadarData_test/',
+    transform=transform,
+    inverse_transform=inverseTransform
+)
+
+
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
 train_dataloader = DataLoader(
@@ -109,6 +118,13 @@ validate_loader = DataLoader(
     batch_size=16,
     shuffle=True
 )
+
+test_loader = DataLoader(
+    dataset=test_data,
+    batch_size=16,
+    shuffle=False
+)
+
 class LogCoshLoss(nn.Module):
     def __init__(self):
         super(LogCoshLoss, self).__init__()
@@ -116,6 +132,29 @@ class LogCoshLoss(nn.Module):
     def forward(self, y_pred, y_true):
         # Compute the difference between predicted and true values
         diff = y_pred - y_true
+        # Compute log(cosh(x)) element-wise
+        loss = torch.log(torch.cosh(diff))
+        # Compute the mean loss over all examples
+        loss = torch.mean(loss)
+        return loss
+    
+class LogCoshThresholdLoss(nn.Module):
+    def __init__(self,lower_threshold,upper_threshold):
+        super(LogCoshThresholdLoss, self).__init__()
+        self.lower_threshold=lower_threshold.cuda()
+        self.upper_threshold=upper_threshold.cuda()
+
+    def forward(self, y_pred, y_true):
+        # get data between threasholds
+
+        # Create a boolean mask for values between the thresholds
+        mask = (y_true >= self.lower_threshold) & (y_true < self.upper_threshold)
+
+        # Use the boolean mask to filter the tensor
+        y_true_filtered_values = y_true[mask[0,0]]
+        y_pred_filtered_values = y_pred[mask[0,0]]
+        # Compute the difference between predicted and true values
+        diff = y_pred_filtered_values - y_true_filtered_values
         # Compute log(cosh(x)) element-wise
         loss = torch.log(torch.cosh(diff))
         # Compute the mean loss over all examples
@@ -136,10 +175,17 @@ optim = Adam(model.parameters(), lr=3e-4)
 scheduler = torch.optim.lr_scheduler.MultiStepLR(optim, milestones=[10,6,4], gamma=0.1)
 # Binary Cross Entropy, target pixel values either 0 or 1
 # criterion = nn.BCELoss(reduction='sum')
-criterion = LogCoshLoss()
+# -999 -0
+# criterion_undefined_rain = LogCoshThresholdLoss(transform(np.array([[-999]])),transform(np.array([[0]])))
+# # 0-2.5
+# criterion_light_rain = LogCoshThresholdLoss(transform(np.array([[0]])),transform(np.array([[2.5]])))
+# # 2.5 - 7.5
+# criterion_moderate_rain = LogCoshThresholdLoss(transform(np.array([[2.5]])),transform(np.array([[7.5]])))
+# # 73.5-200
+# criterion_heavy_rain = LogCoshThresholdLoss(transform(np.array([[7.5]])),transform(np.array([[201]])))
 num_epochs = 10
-
-folder_name='radar_trainer_30M_RainNet_512_size_log_200'
+criterion = LogCoshLoss()
+folder_name='radar_trainer_30M_RainNet_512_size_log_200_normalize'
 # Initializing in a separate cell, so we can easily add more epochs to the same run
 
 writer = SummaryWriter(f'runs/{folder_name}_{timestamp}')
@@ -153,7 +199,14 @@ for epoch in range(1, num_epochs + 1):
     for batch_num, (input, target) in enumerate(train_dataloader, 1):
         optim.zero_grad()
         output = model(input)
-        loss = criterion(output.flatten(), target.flatten())
+        output_flatten=output.flatten()
+        target_flatten=target.flatten()
+        # loss_undefined_rain = criterion_undefined_rain(output_flatten, target_flatten)
+        # loss_light_rain = criterion_light_rain(output_flatten, target_flatten)
+        # loss_moderate_rain = criterion_moderate_rain(output_flatten, target_flatten)
+        # loss_heavy_rain = criterion_heavy_rain(output_flatten, target_flatten)
+        # loss=0.1*loss_undefined_rain+0.2*loss_light_rain+0.3*loss_moderate_rain+0.4*loss_heavy_rain
+        loss = criterion(output_flatten, target_flatten)
         loss.backward()
         optim.step()
         # optim.zero_grad()
@@ -168,7 +221,7 @@ for epoch in range(1, num_epochs + 1):
             input=inverseTransform(input)
             output=inverseTransform(output)
             # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',folder_name)
-            plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4] ,target[0,0],output[0,0]], 2, 4,epoch,batch_num,'train',folder_name)
+            plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,target[0,0],output[0,0]], 2, 4,epoch,batch_num,'train',folder_name)
     # print('Accuracy of the network : %.2f %%' % (100 * acc / total))
 
     train_loss /= len(train_dataloader.dataset)
@@ -178,15 +231,23 @@ for epoch in range(1, num_epochs + 1):
     val_loss = 0
     model.eval()
     with torch.no_grad():
-        for input, target in validate_loader:
+        for batch_num, (input, target) in enumerate(validate_loader, 1):
             output = model(input)
-            loss = criterion(output.flatten(), target.flatten())
+            output_flatten=output.flatten()
+            target_flatten=target.flatten()
+            # loss_undefined_rain = criterion_undefined_rain(output_flatten, target_flatten)
+            # loss_light_rain = criterion_light_rain(output_flatten, target_flatten)
+            # loss_moderate_rain = criterion_moderate_rain(output_flatten, target_flatten)
+            # loss_heavy_rain = criterion_heavy_rain(output_flatten, target_flatten)
+            # loss=0.1*loss_undefined_rain+0.2*loss_light_rain+0.3*loss_moderate_rain+0.4*loss_heavy_rain
+            loss = criterion(output_flatten, target_flatten)
             val_loss += loss.item()
-    target=inverseTransform(target)
-    input=inverseTransform(input)
-    output=inverseTransform(output)
-    # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3] ,input[0,0,input.shape[2]-4] ,input[0,0,input.shape[2]-5] ,input[0,0,input.shape[2]-6]  ,target[0][0] ,output[0][0] ], 2, 4,epoch,batch_num,'validate',folder_name)
-    plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4] ,target[0,0],output[0,0]], 2, 4,epoch,batch_num,'validate',folder_name)
+            if batch_num%100 ==0:
+                target=inverseTransform(target)
+                input=inverseTransform(input)
+                output=inverseTransform(output)
+                # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3] ,input[0,0,input.shape[2]-4] ,input[0,0,input.shape[2]-5] ,input[0,0,input.shape[2]-6]  ,target[0][0] ,output[0][0] ], 2, 4,epoch,batch_num,'validate',folder_name)
+                plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,target[0,0],output[0,0]], 2, 4,epoch,batch_num,'validate',folder_name)
 
     val_loss /= len(validate_loader.dataset)
     # val_loss /= 128
@@ -201,53 +262,124 @@ for epoch in range(1, num_epochs + 1):
                        epoch)
     writer.flush()
 
-def collate_test(batch):
-    # Last 10 frames are target
-    # target = np.array(batch)[:, 36:]
-    #
-    # # Add channel dim, scale pixels between 0 and 1, send to GPU
-    # batch = torch.tensor(batch).unsqueeze(1)
-    # batch = batch / 136.7
-    # batch = batch.to(device)
-    # return batch, target
-    # Add channel dim, scale pixels between 0 and 1, send to GPU
-    batch = torch.tensor(batch).unsqueeze(1)
-    # batch = (batch - mean) / std
-    batch = batch / 136.7
-    batch = batch.to(device)
+# Save the model's state dictionary
+torch.save(model.state_dict(), folder_name+'_model.pth')
 
-    # Randomly pick 6 frames as input (0.5 hours), 11th frame is target
-    rand = np.random.randint(6, 288)
-    return batch[:, :, rand - 6:rand], batch[:, :, rand]
+# Save the optimizer's state dictionary if needed
+torch.save(optim.state_dict(), folder_name+'_optimizer.pth')
 
-# # Test Data Loaderm
-# test_loader = DataLoader(test_data, shuffle=True,
-#                          batch_size=3, collate_fn=collate_test)
+# To load the model later
+# model = CNNModel()
+# model.load_state_dict(torch.load('cnn_model.pth'))
 
-# # Get a batch
-# batch, target = next(iter(test_loader))
+# # If you saved the optimizer's state dictionary, you can load it back
+# optimizer.load_state_dict(torch.load('optimizer.pth'))
 
-# # Initialize output sequence
-# output = np.zeros(target.shape, dtype=np.uint8)
+# test phase
 
-# # Loop over timesteps
-# # for timestep in range(target.shape[1]):
-# #     input = batch[:, :, timestep:timestep + 36]
-# #     output[:, timestep] = model(input).squeeze(1).detach().cpu().numpy()
-# # test_loss = criterion(torch.from_numpy(output).float().flatten(), torch.from_numpy(target).float().flatten())
-# # print(f"the test loss is {test_loss}")
-# test_loss=0
-# i=0
-# for input, target in test_loader:
-#     output = model(input)
-#     loss = criterion(output.flatten(), target.flatten())
-#     test_loss += loss.item()
-#     # save the output and the target as image side by side
-#     plot_images([input[0,0,input.shape[2]-6],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-1] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'test')
-#     i=i+1
+# Define the rain categories and thresholds
 
-# test_loss /= len(test_loader.dataset)
-# test_loss /= train_loader.dataset.shape[2]
+categories_threshold={'undefined':(-999, 0),'light rain':(0, 2.5), 'moderate rain':(2.5, 7.5), 'heavy rain':(7.5, 200)}# Function to categorize pixel values based on thresholds
+def categorize_pixel(value, thresholds, categories):
+    for i, (lower, upper) in enumerate(thresholds):
+        if lower <= value < upper:
+            return categories[i]
+    return categories[-1]  # Return the last category as default
 
-# print(f"the test loss is {test_loss}")
+# Function to calculate CSI for a single category
+def calculate_cat_csi(predicted, actual, category):
+    actual_label=actual.detach().cpu().numpy().astype(int)
+    predicted_label=predicted.detach().cpu().numpy().astype(int)
+    # Calculate confusion matrix
+    cm = confusion_matrix((actual_label>= categories_threshold[category][0]).astype(int) & (actual_label< categories_threshold[category][1]).astype(int), (predicted_label>= categories_threshold[category][0]).astype(int) & (predicted_label< categories_threshold[category][1]).astype(int), labels=[0, 1])
+    # Check the shape of the confusion matrix
+    # Check the shape of the confusion matrix
+    if cm.shape == (2, 2):
+        # Unpack the confusion matrix values
+        tn, fp, fn, tp = cm.ravel()
+
+        # Calculate CSI using the formula
+        if tp + fp + fn == 0:
+            # Handle the case where TP + FP + FN is zero
+            csi = 1 
+        else:
+            # Calculate CSI
+            csi = tp / (tp + fp + fn)
+    else:
+        # In case the confusion matrix is not 2x2, handle appropriately
+        csi = 0 
+    # Calculate CSI
+    return csi
+
+
+# Function to calculate CSI for a single category
+def calculate_csi(predicted, actual, category):
+    # Calculate the confusion matrix
+    tn, fp, fn, tp = confusion_matrix(actual == category, predicted == category).ravel()
+    # Calculate CSI
+    csi = tp / (tp + fp + fn)
+    return csi
+# Calculate RMSE for each image
+rmse_values = []
+
+# Calculate CSI for each category across all images
+csi_values = {category: [] for category in categories_threshold.keys()}
+output_file_path = folder_name+'_results.txt'  # Specify the file path where you want to save the results
+
+model.eval()
+with torch.no_grad():
+    for batch_num, (input, target) in enumerate(test_loader, 1):
+        output = model(input)
+        actual_img=inverseTransform(target)
+        predicted_img=inverseTransform(output)
+        if batch_num%100 ==0:
+            input=inverseTransform(input)
+            # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',folder_name)
+            plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,actual_img[0,0],predicted_img[0,0]], 2, 4,1,batch_num,'test',folder_name)
+        
+         # Calculate the squared differences between actual and predicted values
+        squared_differences = (actual_img - predicted_img) ** 2
+    
+        # Calculate the mean of the squared differences
+        mean_squared_error = np.mean(squared_differences.detach().cpu().numpy())
+        
+        # Calculate RMSE
+        rmse = np.sqrt(mean_squared_error)
+        
+        # Append RMSE to list
+        rmse_values.append(rmse)
+        # Flatten the images to 1D arrays for comparison
+        actual_flat = actual_img.flatten()
+        predicted_flat = predicted_img.flatten()
+        
+        # Categorize pixel values
+        # actual_categorized = np.array([categorize_pixel(value, thresholds, categories) for value in actual_flat])
+        # predicted_categorized = np.array([categorize_pixel(value, thresholds, categories) for value in predicted_flat])
+        
+        # Calculate CSI for each category
+        for category in categories_threshold.keys():
+            # csi = calculate_csi(predicted_categorized, actual_categorized, category)
+            csi=calculate_cat_csi(predicted_flat, actual_flat, category)
+            csi_values[category].append(csi)
+        print(f"test batch number={batch_num}")
+
+
+
+# Calculate the average RMSE across all images
+average_rmse = np.mean(rmse_values)
+
+# Display the results
+print(f"Average RMSE across all images: {average_rmse}")
+with open(output_file_path, 'w') as file:
+    file.write(f"\nAverage RMSE across all images: {average_rmse}\n")
+
+    # Calculate the average CSI for each category across all images
+    average_csi = {category: np.mean(csi_values[category]) for category in categories_threshold.keys()}
+
+    # Display the results
+    print("Average CSI for each category across all images:")
+    for category, avg_csi in average_csi.items():
+        print(f"{category}: {avg_csi}")
+        file.write(f"\nAverage CSI for category: {category}: {avg_csi}\n")
+    file.close()
 

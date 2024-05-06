@@ -43,13 +43,14 @@ def check_conditions(event_persentage,event_max_precipitation,current_event_no,r
             accepted_events.append(current_event_no)
             return True
         
-        # elif event_persentage<threshold_persentage and zero_counter/total_files*100<=zero_persentage:
-        #     accepted_events.append(current_event_no)
-        #     zero_counter=zero_counter+1
+        elif event_persentage<threshold_persentage and zero_counter/total_files*100<=zero_persentage:
+            accepted_events.append(current_event_no)
+            zero_counter=zero_counter+1
     return False
 
 train_data = '../RadarData/'
 validate_data = '../RadarData_validate/'
+test_data = '../RadarData_test/'
 
 min_value=0
 max_value=0
@@ -60,6 +61,14 @@ def process_data(radar_data_folder_path):
     flattened_arrays = []
     index=0
     total_files = 0
+    for radar_folders in sorted(os.listdir(radar_data_folder_path)):
+        # Construct the full path to the folder
+        folder_path = os.path.join(radar_data_folder_path, radar_folders)
+
+        # Check if the path is a directory
+        if os.path.isdir(folder_path):
+            radar_files = sorted(glob.glob(os.path.join(folder_path, '*.scu')))
+            total_files += len(radar_files)
     global zero_counter
     global min_value
     global max_value
@@ -152,7 +161,10 @@ total_sum=0
 total_sum_square=0
 count=0
 process_data(validate_data)
-
+total_sum=0
+total_sum_square=0
+count=0
+process_data(test_data)
 print(min_value)
 print(max_value)
 
