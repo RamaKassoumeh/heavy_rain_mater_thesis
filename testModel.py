@@ -25,9 +25,14 @@ import io
 from torchvision import transforms
 import numpy as np
 from sklearn.metrics import confusion_matrix
+import seaborn as sns
 
+decimal_places = 3
 
-folder_name='radar_trainer_30M_RainNet_512_size_log_200_multi_loss'
+# Multiply the tensor by 10^decimal_places
+factor = 10 ** decimal_places
+
+folder_name='radar_trainer_30M_RainNet_512_size_log_200'
 
 model=RainNet()
 model=torch.nn.DataParallel(model)
@@ -67,6 +72,8 @@ transform = transforms.Compose([
     # transforms.Lambda(lambda x: torch.log(x+1)),
      transforms.Lambda(lambda x:  (torch.log(x+1) / torch.log(torch.tensor(max_value))).float()),
     # transforms.Lambda(lambda x: x.float())
+    transforms.Lambda(lambda x: torch.round(x*factor)/factor) 
+
     
 ])
 def invert_custom_transform1(x):
@@ -87,7 +94,7 @@ inverseTransform= transforms.Compose([
     transforms.Lambda(invert_custom_transform1) ,
     # transforms.Lambda(invert_custom_transform2) ,
     # transforms.Lambda(lambda x: (x*(max_value - min_value))+min_value)
-    # transforms.Lambda(lambda x: x) 
+    transforms.Lambda(lambda x: torch.round(x*factor)/factor) 
 ])
 
 test_data = RadarFilterRainNetDataset(
@@ -97,7 +104,7 @@ test_data = RadarFilterRainNetDataset(
 )
 test_loader = DataLoader(
     dataset=test_data,
-    batch_size=16,
+    batch_size=8,
     shuffle=False
 )
 
@@ -139,6 +146,9 @@ def calculate_cat_csi(predicted, actual, category):
     # Calculate CSI
     return csi
 
+def check_spetial_residual(actual_img,predicted_img):
+    return (actual_img - predicted_img) ** 2
+    
 
 # Function to calculate CSI for a single category
 def calculate_csi(predicted, actual, category):
@@ -153,6 +163,7 @@ rmse_values = []
 # Calculate CSI for each category across all images
 csi_values = {category: [] for category in categories_threshold.keys()}
 output_file_path = folder_name+'_results.txt'  # Specify the file path where you want to save the results
+spatial_errors = []
 
 model.eval()
 with torch.no_grad():
@@ -160,6 +171,7 @@ with torch.no_grad():
         output = model(input)
         actual_img=inverseTransform(target)
         predicted_img=inverseTransform(output)
+        
         if batch_num%100 ==0:
             input=inverseTransform(input)
             # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',folder_name)
@@ -190,7 +202,10 @@ with torch.no_grad():
             csi=calculate_cat_csi(predicted_flat, actual_flat, category)
             csi_values[category].append(csi)
         print(f"test batch number={batch_num}")
-
+        if batch_num%10 ==0:
+            predicted_img=invert_custom_transform2(predicted_img)
+            spatial_error = check_spetial_residual(actual_img,predicted_img)
+            spatial_errors.append(spatial_error)
 
 
 # Calculate the average RMSE across all images
@@ -211,3 +226,19 @@ with open(output_file_path, 'w') as file:
         file.write(f"\nAverage CSI for category: {category}: {avg_csi}\n")
     file.close()
 
+# Create Heatmaps
+for i, spatial_error in enumerate(spatial_errors):
+    plt.figure()
+    sns.heatmap(spatial_error[0,0].detach().cpu().numpy(), cmap='viridis')
+    plt.title(f'Spatial Error Heatmap (Image {i + 1})')
+    plt.savefig(f"output/Errors/Spatial Error Heatmap (Image {i + 1})")
+    plt.close()
+
+# Create Contour Plots
+for i, spatial_error in enumerate(spatial_errors):
+    plt.figure()
+    contour = plt.contour(spatial_error[0,0].detach().cpu().numpy(), cmap='viridis')
+    plt.title(f'Spatial Error Contour Plot (Image {i + 1})')
+    plt.colorbar(contour)
+    plt.savefig(f"output/Errors/Spatial Error Contour (Image {i + 1})")
+    plt.close()
