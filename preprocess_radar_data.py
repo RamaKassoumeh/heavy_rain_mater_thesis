@@ -39,6 +39,7 @@ def check_conditions(event_persentage,event_max_precipitation,current_event_no,r
     global zero_counter
     # chekc if the previous 6 radar files are exist
     if check_previous_files_exist(radar_file):
+        print(radar_file)
         if event_persentage>=threshold_persentage or event_max_precipitation>=max_threshold_persentage:
             accepted_events.append(current_event_no)
             return True
@@ -52,6 +53,7 @@ train_data = '../RadarData/'
 validate_data = '../RadarData_validate/'
 test_data = '../RadarData_test/'
 
+satellite_data='../SatelliteData/'
 min_value=0
 max_value=0
 

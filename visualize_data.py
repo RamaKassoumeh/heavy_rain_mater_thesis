@@ -4,6 +4,7 @@ from datetime import datetime
 import torch
 from RadarFilterImageDataset import RadarFilterImageDataset
 from RadarFilterRainNetDataset import RadarFilterRainNetDataset
+from RadarFilterRainNetSatelliteDataset import RadarFilterRainNetSatelliteDataset
 from plotting import plot_images
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
@@ -121,8 +122,9 @@ inverseTransform= transforms.Compose([
     # transforms.Lambda(lambda x: (x*(max_value - min_value))+min_value)
     # transforms.Lambda(lambda x: x) 
 ])
-train_dataset = RadarFilterRainNetDataset(
-    img_dir='../RadarData/',
+train_dataset = RadarFilterRainNetSatelliteDataset(
+    img_dir='../RadarTest',
+    sat_dir='../SatelliteData',
     return_original=True,
     transform=transform,
     inverse_transform=inverseTransform
