@@ -93,7 +93,7 @@ def plot_images(image_list, row, col, epoch, batch_num, name,folder_name):
         # image = ((image_list[i])*(max_value - min_value))+min_value
         image=image_list[i]
         image = image.detach().cpu().numpy()
-        image = np.where(image < -0.01, -999, image)
+        image = np.where(image < -0.1, -999, image)
 
         ax_grid[i].imshow(image, cmap=cmap, vmin=-999, vmax=1000)  # Assuming grayscale images
         ax_grid[i].axis('off')

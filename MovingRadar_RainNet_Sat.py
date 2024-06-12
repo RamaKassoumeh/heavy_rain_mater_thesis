@@ -7,7 +7,7 @@ import torch.nn as nn
 from torch.optim import Adam
 from torch.utils.tensorboard import SummaryWriter
 from RadarFilterImageDataset import RadarFilterImageDataset
-from RadarFilterRainNetDataset import RadarFilterRainNetDataset
+from RadarFilterRainNetSatelliteDataset import RadarFilterRainNetSatelliteDataset
 
 from RainNet import RainNet
 from plotting import plot_images
@@ -86,19 +86,19 @@ inverseTransform= transforms.Compose([
     transforms.Lambda(lambda x: x) 
 ])
 
-train_dataset = RadarFilterRainNetDataset(
+train_dataset = RadarFilterRainNetSatelliteDataset(
     img_dir='../RadarData/',
     transform=transform,
     inverse_transform=inverseTransform
 )
 
-validate_data = RadarFilterRainNetDataset(
+validate_data = RadarFilterRainNetSatelliteDataset(
     img_dir='../RadarData_validate/',
     transform=transform,
     inverse_transform=inverseTransform
 )
 
-test_data = RadarFilterRainNetDataset(
+test_data = RadarFilterRainNetSatelliteDataset(
     img_dir='../RadarData_test/',
     transform=transform,
     inverse_transform=inverseTransform
@@ -109,19 +109,19 @@ timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
 train_dataloader = DataLoader(
     dataset=train_dataset,
-    batch_size=20,
+    batch_size=16,
     shuffle=True
 )
 
 validate_loader = DataLoader(
     dataset=validate_data,
-    batch_size=20,
+    batch_size=16,
     shuffle=True
 )
 
 test_loader = DataLoader(
     dataset=test_data,
-    batch_size=20,
+    batch_size=16,
     shuffle=False
 )
 
@@ -185,7 +185,7 @@ scheduler = torch.optim.lr_scheduler.MultiStepLR(optim, milestones=[10,6,4], gam
 # criterion_heavy_rain = LogCoshThresholdLoss(transform(np.array([[7.5]])),transform(np.array([[201]])))
 num_epochs = 10
 criterion = LogCoshLoss()
-folder_name='radar_trainer_30M_RainNet_288_size_log_200_normalize'
+folder_name='radar_trainer_30M_RainNet_Sat_512_size_log_200_normalize'
 # Initializing in a separate cell, so we can easily add more epochs to the same run
 
 writer = SummaryWriter(f'runs/{folder_name}_{timestamp}')

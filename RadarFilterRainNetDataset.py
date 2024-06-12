@@ -64,16 +64,16 @@ class RadarFilterRainNetDataset(Dataset):
             # if return_original==False:
                 # Normalize data
                 # ds_arr=(ds_arr - self.min_value) / (self.max_value - self.min_value)
-             # Convert the 2D array to a PIL Image           
-            image = Image.fromarray(ds_arr)
+            # Convert the 2D array to a PIL Image           
+            image = Image.fromarray(ds_arr[137:436, 58:357]) # get only NRW radar area
             # resized_image = image.resize((128, 128))
-            resized_image = image.resize((512, 512),PIL.Image.NEAREST )
+            resized_image = image.resize((288, 288),PIL.Image.NEAREST )
                     
             # Convert the resized image back to a 2D NumPy array
             resized_image = np.array(resized_image)
             # resized_image=self.transform(resized_image)
             file.close()        
-            return resized_image# ds_arr[110:366,110:366]
+            return resized_image # ds_arr[110:366,110:366]
         except Exception as e:
             print(e)
             print(img_path)
