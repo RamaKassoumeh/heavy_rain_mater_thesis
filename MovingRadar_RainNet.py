@@ -64,6 +64,16 @@ transform = transforms.Compose([
     
 ])
 
+# Declaring the variable by using square kernels and equal stride
+c = nn.Conv3d(18, 35, 5, stride=1,padding="same")
+
+# Describing the input and output variables
+input = torch.randn(22, 18, 12, 52, 102)
+output = c(input)
+
+# Print output
+print(output) 
+
 
 def invert_custom_transform1(x):
     # Use PyTorch's where function to apply the transformation element-wise
@@ -87,19 +97,19 @@ inverseTransform= transforms.Compose([
 ])
 
 train_dataset = RadarFilterRainNetDataset(
-    img_dir='../RadarData/',
+    img_dir='../RadarData_18/',
     transform=transform,
     inverse_transform=inverseTransform
 )
 
 validate_data = RadarFilterRainNetDataset(
-    img_dir='../RadarData_validate/',
+    img_dir='../RadarData_validate_18/',
     transform=transform,
     inverse_transform=inverseTransform
 )
 
 test_data = RadarFilterRainNetDataset(
-    img_dir='../RadarData_test/',
+    img_dir='../RadarData_test_18/',
     transform=transform,
     inverse_transform=inverseTransform
 )
@@ -109,19 +119,19 @@ timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
 train_dataloader = DataLoader(
     dataset=train_dataset,
-    batch_size=20,
+    batch_size=1,
     shuffle=True
 )
 
 validate_loader = DataLoader(
     dataset=validate_data,
-    batch_size=20,
+    batch_size=1,
     shuffle=True
 )
 
 test_loader = DataLoader(
     dataset=test_data,
-    batch_size=20,
+    batch_size=1,
     shuffle=False
 )
 

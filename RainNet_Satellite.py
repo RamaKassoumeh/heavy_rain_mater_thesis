@@ -7,7 +7,6 @@ class RainNet(nn.Module):
     def __init__(self, 
                  kernel_size = 3,
                  mode = "regression",
-                 im_shape = (512,512),
                 #  im_shape = (256,256),
                  conv_shape = [["1", [6,64]],
                         ["2" , [64,128]],
@@ -17,23 +16,44 @@ class RainNet(nn.Module):
                         ["6" , [1536,512]],
                         ["7" , [768,256]],
                         ["8" , [384,128]],
-                        ["9" , [192,64]]]):
+                        ["9" , [192,64]]],
+                encoder_radar = [["1", [6,64]],
+                        ["2" , [64,128]],
+                        ["3" , [128,256]],
+                        ["4" , [256,512]],
+                        ["5" , [512,1024]]],
+                encoder_satellite = [["1", [6*11,64*11]],
+                        ["2" , [64*11,128*11]],
+                        ["3" , [128*11,256*11]],
+                        ["4" , [256*11,512*11]],
+                        ["5" , [512*11,1024*11]]],
+                decoder = [["6" , [1024+512+1024*11+512*11,512+512*11]],
+                        ["7" , [512+256+512*11+265*11,256+265*11]],
+                        ["8" , [256+128+256*11+128*11,128+128*11]],
+                        ["9" , [128+64+128*11+64*11,64+64*11]]]):
         
         super().__init__()
         self.kernel_size = kernel_size
         self.mode = mode
-        self.im_shape = im_shape
 
-        self.conv = nn.ModuleDict()
-        for name, (in_ch, out_ch) in conv_shape:
+        self.conv_encoder_radar = nn.ModuleDict()
+        for name, (in_ch, out_ch) in encoder_radar:
+            self.conv_encoder_radar[name] = self.make_conv_block(in_ch,
+                                                       out_ch ,self.kernel_size)
+
+        self.conv_encoder_sat = nn.ModuleDict()
+        for name, (in_ch, out_ch) in encoder_satellite:
+            self.conv_encoder_sat[name] = self.make_conv_block(in_ch,
+                                                       out_ch ,self.kernel_size)
+        self.conv = nn.ModuleDict()    
+        for name, (in_ch, out_ch) in decoder:
             if name != "9":
                 self.conv[name] = self.make_conv_block(in_ch,
                                                        out_ch ,self.kernel_size)
             else:
                 self.conv[name] = nn.Sequential(
                     self.make_conv_block(in_ch, out_ch, self.kernel_size),
-                    nn.Conv2d(out_ch, 2, 3, padding='same'))
-        
+                    nn.Conv2d(out_ch, 2, 3, padding='same'))        
         
         self.pool = nn.MaxPool2d(kernel_size = (2,2))
         self.upsample = nn.Upsample(scale_factor=(2,2))
@@ -44,8 +64,6 @@ class RainNet(nn.Module):
         if self.mode == "regression":
             self.last_layer = nn.Sequential(
                 nn.Conv2d(2, 1, kernel_size=1, padding = 'valid'),
-                # MISTAKE : not a fully connected layer, but linear activation (no activation)
-                #nn.Linear(self.im_shape[0], self.im_shape[1])
                 )
         elif self.mode == "segmentation":
             self.last_layer = nn.Sequential(
@@ -64,16 +82,25 @@ class RainNet(nn.Module):
             )
     
         
-    def forward(self, x):
-        x1s = self.conv["1"](x.float()) # conv1s
-        x2s = self.conv["2"](self.pool(x1s)) # conv2s
-        x3s = self.conv["3"](self.pool(x2s)) # conv3s
-        x4s = self.conv["4"](self.pool(x3s)) # conv4s
-        x = self.conv["5"](self.pool(self.drop(x4s))) # conv5s
-        x = torch.cat((self.upsample(self.drop(x)), x4s), dim=1) # up6
-        x = torch.cat((self.upsample(self.conv["6"](x)), x3s), dim=1) # up7
-        x = torch.cat((self.upsample(self.conv["7"](x)), x2s), dim=1) # up8
-        x = torch.cat((self.upsample(self.conv["8"](x)), x1s), dim=1) # up9
+    def forward(self, x_radar,x_sat):
+        x1r = self.conv_encoder_radar["1"](x_radar.float()) # conv1s
+        x2r = self.conv_encoder_radar["2"](self.pool(x1r)) # conv2s
+        x3r = self.conv_encoder_radar["3"](self.pool(x2r)) # conv3s
+        x4r = self.conv_encoder_radar["4"](self.pool(x3r)) # conv4s
+        x_r = self.conv["5"](self.pool(self.drop(x4r))) # conv5s
+
+        x1s = self.conv_encoder_radar["1"](x_sat.float()) # conv1s
+        x2s = self.conv_encoder_radar["2"](self.pool(x1s)) # conv2s
+        x3s = self.conv_encoder_radar["3"](self.pool(x2s)) # conv3s
+        x4s = self.conv_encoder_radar["4"](self.pool(x3s)) # conv4s
+        x_s = self.conv["5"](self.pool(self.drop(x4r))) # conv5s
+
+        x=torch.cat(x_r,x_s) # concatenate radar and satellite data
+
+        x = torch.cat((self.upsample(self.drop(x)), x4r,x4s), dim=1) # up6
+        x = torch.cat((self.upsample(self.conv["6"](x)),x3r, x3s), dim=1) # up7
+        x = torch.cat((self.upsample(self.conv["7"](x)),x2r, x2s), dim=1) # up8
+        x = torch.cat((self.upsample(self.conv["8"](x)),x1r ,x1s), dim=1) # up9
         x = self.conv["9"](x) #conv9
         x = self.last_layer(x) #outputs
         

@@ -10,22 +10,43 @@ from torch.utils.data import Dataset
 # from torchvision.io import read_image
 from PIL import Image
 import PIL
+# from osgeo import gdal
+from rasterio.enums import Resampling
+
 
 class RadarFilterRainNetSatelliteDataset(Dataset):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    def __init__(self, img_dir,sat_dir, transform=None,inverse_transform=None,return_original=False):
+    def __init__(self, img_dir,sat_dir, transform=None,inverse_transform=None,return_original=False,Sat_transform=None):
         self.img_dir = img_dir
         self.sat_dir=sat_dir
         self.return_original=return_original
         self.img_names = []
         self.transform = transform
         self.inverse_transform=inverse_transform
+        self.Sat_transform=Sat_transform
         self.mean=0.129
         self.std=0.857
         self.max_value=200
         # self.max_value=996.411
         # self.min_value=0
         self.min_value=-999.0 
+        self.resampling_method='lanczos'
+        self.target_width=288
+        self.target_height=288
+        # self.resampling_methods = {
+        # 'near': gdal.GRA_NearestNeighbour,
+        # 'bilinear': gdal.GRA_Bilinear,
+        # 'cubic': gdal.GRA_Cubic,
+        # 'cubicspline': gdal.GRA_CubicSpline,
+        # 'lanczos': gdal.GRA_Lanczos
+        # }
+        # # Define options for gdal.Warp
+        # self.warp_options = gdal.WarpOptions(
+        #     format='MEM',
+        #     width=self.target_width,
+        #     height=self.target_height,
+        #     resampleAlg=self.resampling_methods[self.resampling_method]
+        # )
 
         # Walk through all directories and files
         for radar_folders in sorted(os.listdir(self.img_dir)):
@@ -73,7 +94,7 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
             # Convert the 2D array to a PIL Image           
             image = Image.fromarray(ds_arr[137:436, 58:357]) # get only NRW radar area
             # resized_image = image.resize((128, 128))
-            resized_image = image.resize((288, 288),PIL.Image.NEAREST )
+            resized_image = image.resize((self.target_width, self.target_height),PIL.Image.NEAREST )
                     
             # Convert the resized image back to a 2D NumPy array
             resized_image = np.array(resized_image)
@@ -92,34 +113,71 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
             data_array = dataset.read()
             return data_array
 
+    def read_updample_satellite_image(self,indx):
+        satellite_file_name =  self.satellite_names[indx]
+        # satellite_dataset = gdal.Open(satellite_file_name)
+        # # Perform the upsampling
+        # output_satellite_dataset = gdal.Warp('', satellite_dataset, options=self.warp_options)
+        # band_data = []
+        # for i in range(1, output_satellite_dataset.RasterCount + 1):
+        #     band = output_satellite_dataset.GetRasterBand(i)
+        #     band_array = band.ReadAsArray()
+        #     band_data.append(band_array)
+        # data_array=np.stack(band_data, axis=0)
+        with rasterio.open(satellite_file_name) as src:
+            # Calculate the transform for the new dimensions
+            transform = src.transform * src.transform.scale(
+                (src.width / self.target_width),
+                (src.height / self.target_height)
+            )
+
+            # Read the data from the source dataset and resample
+            data_array = src.read(
+                out_shape=(src.count, self.target_height, self.target_width),
+                resampling=Resampling.lanczos
+            )
+        return data_array
+        
     def __getitem__(self, idx):
-        resized_radar_array=[]  
+        radar_array=[]  
         satellite_array=[]
         # read 6 frames as input (0.5 hours), the current is the target
         for i in range(1,7):         
-            resized_image=self.read_radar_image(self.radar_data_array[idx]-i)
-            resized_radar_array.append(resized_image)
-            satellite_image=self.read_satellite_image(self.satellite_data_array[idx]-i)
+            radar_image=self.read_radar_image(self.radar_data_array[idx]-i)
+            radar_array.append(radar_image)
+            # satellite_image=self.read_satellite_image(self.satellite_data_array[idx]-i)
+            satellite_image=self.read_updample_satellite_image(self.satellite_data_array[idx]-i)
             satellite_array.append(satellite_image)
         label_image=self.read_radar_image(self.radar_data_array[idx])
 
-        resized_radar_array=np.stack(resized_radar_array, axis=2)
+        radar_array=np.stack(radar_array, axis=2)
+        # satellite_array=np.stack(satellite_array, axis=3)
         # Add channel dim, scale pixels between 0 and 1, send to GPU
         # batch = torch.tensor(resized_radar_array).unsqueeze(0)
         
         # label = torch.tensor(label_image).unsqueeze(0)
-        batch = self.transform(resized_radar_array)
+        batch_radar = self.transform(radar_array)
+        # loop over satellite_array
+        # Initialize an empty list to hold the tensors
+        sat_tensors = []
+        for satellite_arr in satellite_array:
+            # batch_satellite = self.transform(arr)
+            sat_tensor=torch.from_numpy(satellite_arr.astype(np.float32))
+            sat_tensors.append(sat_tensor)
+
+        batch_satellite = torch.cat(sat_tensors, dim=0)
         # batch = batch.unsqueeze(0)
         # batch = batch.unsqueeze(1)
         label=self.transform(label_image)
-        batch = batch.cuda()
+        batch_radar = batch_radar.cuda()
+        batch_satellite = batch_satellite.cuda()
         label=label.cuda()
         if self.return_original==True:
             original_label_image=self.read_radar_image(self.radar_data_array[idx],True)
             # original_label=self.transform(original_label_image)
             original_label = torch.tensor(original_label_image).unsqueeze(0)
             original_label=original_label.cuda()
-            return batch,label,original_label
-        return batch, label
+            return batch_radar,label,original_label
+        return batch_radar,batch_satellite, label
     
     

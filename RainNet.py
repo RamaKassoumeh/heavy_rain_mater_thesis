@@ -7,7 +7,6 @@ class RainNet(nn.Module):
     def __init__(self, 
                  kernel_size = 3,
                  mode = "regression",
-                 im_shape = (512,512),
                 #  im_shape = (256,256),
                  conv_shape = [["1", [6,64]],
                         ["2" , [64,128]],
@@ -22,7 +21,6 @@ class RainNet(nn.Module):
         super().__init__()
         self.kernel_size = kernel_size
         self.mode = mode
-        self.im_shape = im_shape
 
         self.conv = nn.ModuleDict()
         for name, (in_ch, out_ch) in conv_shape:
@@ -44,8 +42,6 @@ class RainNet(nn.Module):
         if self.mode == "regression":
             self.last_layer = nn.Sequential(
                 nn.Conv2d(2, 1, kernel_size=1, padding = 'valid'),
-                # MISTAKE : not a fully connected layer, but linear activation (no activation)
-                #nn.Linear(self.im_shape[0], self.im_shape[1])
                 )
         elif self.mode == "segmentation":
             self.last_layer = nn.Sequential(
