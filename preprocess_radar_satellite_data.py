@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 
 import pandas as pd
+import rasterio
 
 # create arrays
 accepted_events=[]
@@ -18,7 +19,7 @@ max_threshold=50
 zero_counter = 0
 zero_persentage=20
 
-def check_previous_files_exist(file_path):
+def check_previous_radar_files_exist(file_path):
     directory, filename = os.path.split(file_path)
     prefix, extension = os.path.splitext(filename)
 
@@ -59,6 +60,17 @@ def check_satellite_file_exist(file_path):
         # print(f"File with prefix '{date_time_obj.strftime('-%Y%m%d%H%M')}' found: '{filename}'")
     return date_time_obj,index
 
+def check_satellite_corrupted_file(file_indx):
+    satellite_file_name =  satellite_list[file_indx]
+    with rasterio.open(os.path.join(satellite_data,satellite_file_name)) as dataset:
+        # Access the raster metadata
+        data_array = dataset.read()
+        # Calculate the minimum along and remove the correupted file
+        if np.min(data_array)<30:
+            satellite_list.pop(file_indx)
+            return False
+        return True
+
 def check_previous_satellite_files_exist(date_time_obj):
     # directory, filename = os.path.split(file_path)
     # prefix, extension = os.path.splitext(filename)
@@ -80,7 +92,8 @@ def check_conditions(event_persentage,event_max_precipitation,current_event_no,r
     global zero_counter
     # chekc if the previous 6 radar files are exist
     date_time_obj,sat_index=check_satellite_file_exist(radar_file)
-    if check_previous_files_exist(radar_file) and sat_index!=-1 and check_previous_satellite_files_exist(date_time_obj):
+    
+    if sat_index!=-1 and check_satellite_corrupted_file(sat_index) and check_previous_radar_files_exist(radar_file) and check_previous_satellite_files_exist(date_time_obj):
         print(radar_file)
         if event_persentage>=threshold_persentage or event_max_precipitation>=max_threshold_persentage:
             accepted_events.append(current_event_no)

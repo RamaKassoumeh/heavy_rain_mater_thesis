@@ -20,15 +20,30 @@ import glob
 from PIL import Image
 import io
 
-
+import ast
 
 from torchvision import transforms
 import numpy as np
 from sklearn.metrics import confusion_matrix
 
-# import imageio
-# from ipywidgets import widgets, HBox
-radar_data_folder_path = '../RadarData/'
+# read data from file
+with open("analyse_satellite_IQR.txt", 'r') as file:
+    lines = file.readlines()
+
+data = {}
+for line in lines:
+    key, value = line.split(':', 1)
+    key = key.strip()
+    value = value.strip()
+    value = value.replace('array', '')  # Remove 'array' to make it a valid dictionary
+    data[key] = ast.literal_eval(value)
+
+# Extracting the dictionaries
+iqr_values = data.get("IQR values", {})
+bands_min_values = data.get("Min values", {})
+bands_max_values = data.get("Max values", {})
+outliers_count_percentage_values = data.get("outliers count percentage values", {})
+
 # Use GPU if available
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -47,8 +62,10 @@ def custom_transform2(x):
     # Use PyTorch's where function to apply the transformation element-wise
     return torch.where(x < 0, 0, x)
 
-Sat_transform = transforms.Compose([
-    transforms.ToTensor()])
+sat_transform = transforms.Compose([
+    transforms.ToTensor(),
+    # transforms.Lambda(lambda x: (x-bands_min_values)/(bands_max_values-bands_min_values)),
+    ])
 
 transform = transforms.Compose([
     transforms.ToTensor(),
@@ -93,7 +110,7 @@ train_dataset = RadarFilterRainNetSatelliteDataset(
     sat_dir='../SatelliteData',
     transform=transform,
     inverse_transform=inverseTransform,
-    Sat_transform=Sat_transform
+    sat_transform=sat_transform
 )
 
 validate_data = RadarFilterRainNetSatelliteDataset(
@@ -101,7 +118,7 @@ validate_data = RadarFilterRainNetSatelliteDataset(
     sat_dir='../SatelliteData',
     transform=transform,
     inverse_transform=inverseTransform,
-    Sat_transform=Sat_transform
+    sat_transform=sat_transform
 )
 
 test_data = RadarFilterRainNetSatelliteDataset(
@@ -109,7 +126,7 @@ test_data = RadarFilterRainNetSatelliteDataset(
     sat_dir='../SatelliteData',
     transform=transform,
     inverse_transform=inverseTransform,
-    Sat_transform=Sat_transform
+    sat_transform=sat_transform
 )
 
 
@@ -193,7 +210,7 @@ scheduler = torch.optim.lr_scheduler.MultiStepLR(optim, milestones=[10,6,4], gam
 # criterion_heavy_rain = LogCoshThresholdLoss(transform(np.array([[7.5]])),transform(np.array([[201]])))
 num_epochs = 10
 criterion = LogCoshLoss()
-folder_name='radar_trainer_30M_RainNet_Sat_512_size_log_200_normalize'
+folder_name='radar_trainer_30M_RainNet_Sat_288_size_log_200_normalize_sat'
 # Initializing in a separate cell, so we can easily add more epochs to the same run
 
 writer = SummaryWriter(f'runs/{folder_name}_{timestamp}')
@@ -204,9 +221,9 @@ for epoch in range(1, num_epochs + 1):
     acc=0
     total =0
     model.train()
-    for batch_num, (input_radar,input_satellite, target) in enumerate(train_dataloader, 1):
+    for batch_num, (input, target) in enumerate(train_dataloader, 1):
         optim.zero_grad()
-        output = model(input_radar,input_satellite)
+        output = model(input)
         output_flatten=output.flatten()
         target_flatten=target.flatten()
         # loss_undefined_rain = criterion_undefined_rain(output_flatten, target_flatten)
@@ -226,7 +243,7 @@ for epoch in range(1, num_epochs + 1):
         print(f"batch number={batch_num} in epoch {epoch}")
         if batch_num%100 ==0:
             target=inverseTransform(target)
-            input=inverseTransform(input_radar)
+            input=inverseTransform(input)
             output=inverseTransform(output)
             # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',folder_name)
             plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,target[0,0],output[0,0]], 2, 4,epoch,batch_num,'train',folder_name)
@@ -239,8 +256,8 @@ for epoch in range(1, num_epochs + 1):
     val_loss = 0
     model.eval()
     with torch.no_grad():
-        for batch_num, (input_radar,input_satellite, target) in enumerate(validate_loader, 1):
-            output = model(input_radar,input_satellite)
+        for batch_num, (input, target) in enumerate(validate_loader, 1):
+            output = model(input)
             output_flatten=output.flatten()
             target_flatten=target.flatten()
             # loss_undefined_rain = criterion_undefined_rain(output_flatten, target_flatten)
@@ -252,7 +269,7 @@ for epoch in range(1, num_epochs + 1):
             val_loss += loss.item()
             if batch_num%100 ==0:
                 target=inverseTransform(target)
-                input=inverseTransform(input_radar)
+                input=inverseTransform(input)
                 output=inverseTransform(output)
                 # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3] ,input[0,0,input.shape[2]-4] ,input[0,0,input.shape[2]-5] ,input[0,0,input.shape[2]-6]  ,target[0][0] ,output[0][0] ], 2, 4,epoch,batch_num,'validate',folder_name)
                 plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,target[0,0],output[0,0]], 2, 4,epoch,batch_num,'validate',folder_name)
@@ -336,12 +353,12 @@ output_file_path = folder_name+'_results.txt'  # Specify the file path where you
 
 model.eval()
 with torch.no_grad():
-    for batch_num, (input_radar,input_satellite, target) in enumerate(test_loader, 1):
-        output = model(input_radar,input_satellite)
+    for batch_num, (input, target) in enumerate(test_loader, 1):
+        output = model(input)
         actual_img=inverseTransform(target)
         predicted_img=inverseTransform(output)
         if batch_num%100 ==0:
-            input=inverseTransform(input_radar)
+            input=inverseTransform(input)
             # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',folder_name)
             plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,actual_img[0,0],predicted_img[0,0]], 2, 4,1,batch_num,'test',folder_name)
         

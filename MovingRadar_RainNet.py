@@ -6,10 +6,11 @@ import torch
 import torch.nn as nn
 from torch.optim import Adam
 from torch.utils.tensorboard import SummaryWriter
-from RadarFilterImageDataset import RadarFilterImageDataset
-from RadarFilterRainNetDataset import RadarFilterRainNetDataset
+# from RadarFilterImageDataset import RadarFilterImageDataset
+from RadarFilterRainNet3DDataset import RadarFilterRainNetDataset
+# from RadarFilterRainNetDataset import RadarFilterRainNetDataset
 
-from RainNet import RainNet
+from RainNet3D import RainNet
 from plotting import plot_images
 
 from convlstm import Seq2Seq
@@ -28,7 +29,6 @@ from sklearn.metrics import confusion_matrix
 
 # import imageio
 # from ipywidgets import widgets, HBox
-radar_data_folder_path = '../RadarData/'
 # Use GPU if available
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -64,15 +64,15 @@ transform = transforms.Compose([
     
 ])
 
-# Declaring the variable by using square kernels and equal stride
-c = nn.Conv3d(18, 35, 5, stride=1,padding="same")
+# # Declaring the variable by using square kernels and equal stride
+# c = nn.Conv3d(18, 35, 5, stride=1,padding="same")
 
-# Describing the input and output variables
-input = torch.randn(22, 18, 12, 52, 102)
-output = c(input)
+# # Describing the input and output variables
+# input = torch.randn(22, 18, 12, 52, 102)
+# output = c(input)
 
-# Print output
-print(output) 
+# # Print output
+# print(output) 
 
 
 def invert_custom_transform1(x):
@@ -119,19 +119,19 @@ timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
 train_dataloader = DataLoader(
     dataset=train_dataset,
-    batch_size=1,
+    batch_size=20,
     shuffle=True
 )
 
 validate_loader = DataLoader(
     dataset=validate_data,
-    batch_size=1,
+    batch_size=20,
     shuffle=True
 )
 
 test_loader = DataLoader(
     dataset=test_data,
-    batch_size=1,
+    batch_size=20,
     shuffle=False
 )
 
@@ -195,7 +195,7 @@ scheduler = torch.optim.lr_scheduler.MultiStepLR(optim, milestones=[10,6,4], gam
 # criterion_heavy_rain = LogCoshThresholdLoss(transform(np.array([[7.5]])),transform(np.array([[201]])))
 num_epochs = 10
 criterion = LogCoshLoss()
-folder_name='radar_trainer_30M_RainNet_288_size_log_200_normalize'
+folder_name='radar_trainer_30M_RainNet_288_size_log_200_normalize_3d_2018'
 # Initializing in a separate cell, so we can easily add more epochs to the same run
 
 writer = SummaryWriter(f'runs/{folder_name}_{timestamp}')

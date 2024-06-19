@@ -28,7 +28,7 @@ class RainNet(nn.Module):
                         ["4" , [256*11,512*11]],
                         ["5" , [512*11,1024*11]]],
                 decoder = [["6" , [1024+512+1024*11+512*11,512+512*11]],
-                        ["7" , [512+256+512*11+265*11,256+265*11]],
+                        ["7" , [512+256+512*11+256*11,256+256*11]],
                         ["8" , [256+128+256*11+128*11,128+128*11]],
                         ["9" , [128+64+128*11+64*11,64+64*11]]]):
         
@@ -45,13 +45,13 @@ class RainNet(nn.Module):
         for name, (in_ch, out_ch) in encoder_satellite:
             self.conv_encoder_sat[name] = self.make_conv_block(in_ch,
                                                        out_ch ,self.kernel_size)
-        self.conv = nn.ModuleDict()    
+        self.conv_decoder = nn.ModuleDict()    
         for name, (in_ch, out_ch) in decoder:
             if name != "9":
-                self.conv[name] = self.make_conv_block(in_ch,
+                self.conv_decoder[name] = self.make_conv_block(in_ch,
                                                        out_ch ,self.kernel_size)
             else:
-                self.conv[name] = nn.Sequential(
+                self.conv_decoder[name] = nn.Sequential(
                     self.make_conv_block(in_ch, out_ch, self.kernel_size),
                     nn.Conv2d(out_ch, 2, 3, padding='same'))        
         
@@ -87,21 +87,21 @@ class RainNet(nn.Module):
         x2r = self.conv_encoder_radar["2"](self.pool(x1r)) # conv2s
         x3r = self.conv_encoder_radar["3"](self.pool(x2r)) # conv3s
         x4r = self.conv_encoder_radar["4"](self.pool(x3r)) # conv4s
-        x_r = self.conv["5"](self.pool(self.drop(x4r))) # conv5s
+        x_r = self.conv_encoder_radar["5"](self.pool(self.drop(x4r))) # conv5s
 
-        x1s = self.conv_encoder_radar["1"](x_sat.float()) # conv1s
-        x2s = self.conv_encoder_radar["2"](self.pool(x1s)) # conv2s
-        x3s = self.conv_encoder_radar["3"](self.pool(x2s)) # conv3s
-        x4s = self.conv_encoder_radar["4"](self.pool(x3s)) # conv4s
-        x_s = self.conv["5"](self.pool(self.drop(x4r))) # conv5s
+        x1s = self.conv_encoder_sat["1"](x_sat.float()) # conv1s
+        x2s = self.conv_encoder_sat["2"](self.pool(x1s)) # conv2s
+        x3s = self.conv_encoder_sat["3"](self.pool(x2s)) # conv3s
+        x4s = self.conv_encoder_sat["4"](self.pool(x3s)) # conv4s
+        x_s = self.conv_encoder_sat["5"](self.pool(self.drop(x4s))) # conv5s
 
-        x=torch.cat(x_r,x_s) # concatenate radar and satellite data
+        x=torch.cat((x_r,x_s),dim=1) # concatenate radar and satellite data
 
         x = torch.cat((self.upsample(self.drop(x)), x4r,x4s), dim=1) # up6
-        x = torch.cat((self.upsample(self.conv["6"](x)),x3r, x3s), dim=1) # up7
-        x = torch.cat((self.upsample(self.conv["7"](x)),x2r, x2s), dim=1) # up8
-        x = torch.cat((self.upsample(self.conv["8"](x)),x1r ,x1s), dim=1) # up9
-        x = self.conv["9"](x) #conv9
+        x = torch.cat((self.upsample(self.conv_decoder["6"](x)),x3r, x3s), dim=1) # up7
+        x = torch.cat((self.upsample(self.conv_decoder["7"](x)),x2r, x2s), dim=1) # up8
+        x = torch.cat((self.upsample(self.conv_decoder["8"](x)),x1r ,x1s), dim=1) # up9
+        x = self.conv_decoder["9"](x) #conv9
         x = self.last_layer(x) #outputs
         
         return x

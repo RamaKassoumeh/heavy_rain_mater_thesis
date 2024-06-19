@@ -91,7 +91,10 @@ def plot_images(image_list, row, col, epoch, batch_num, name,folder_name):
         # image = image_list[i]
 
         # image = ((image_list[i])*(max_value - min_value))+min_value
-        image=image_list[i]
+        if len(image_list[i].shape)==3: # if the image has zdim (depth)
+            image=image_list[i][0]
+        else:
+            image=image_list[i]
         image = image.detach().cpu().numpy()
         image = np.where(image < -0.1, -999, image)
 

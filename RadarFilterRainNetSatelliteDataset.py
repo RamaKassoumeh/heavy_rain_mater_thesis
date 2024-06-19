@@ -16,14 +16,14 @@ from rasterio.enums import Resampling
 
 class RadarFilterRainNetSatelliteDataset(Dataset):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    def __init__(self, img_dir,sat_dir, transform=None,inverse_transform=None,return_original=False,Sat_transform=None):
+    def __init__(self, img_dir,sat_dir, transform=None,inverse_transform=None,return_original=False,sat_transform=None):
         self.img_dir = img_dir
         self.sat_dir=sat_dir
         self.return_original=return_original
         self.img_names = []
         self.transform = transform
         self.inverse_transform=inverse_transform
-        self.Sat_transform=Sat_transform
+        self.sat_transform=sat_transform
         self.mean=0.129
         self.std=0.857
         self.max_value=200
@@ -148,6 +148,7 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
             # satellite_image=self.read_satellite_image(self.satellite_data_array[idx]-i)
             satellite_image=self.read_updample_satellite_image(self.satellite_data_array[idx]-i)
             satellite_array.append(satellite_image)
+
         label_image=self.read_radar_image(self.radar_data_array[idx])
 
         radar_array=np.stack(radar_array, axis=2)
@@ -157,27 +158,35 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
         
         # label = torch.tensor(label_image).unsqueeze(0)
         batch_radar = self.transform(radar_array)
+		# add depth diminsion
+        batch_radar = batch_radar.unsqueeze(1)
         # loop over satellite_array
         # Initialize an empty list to hold the tensors
-        sat_tensors = []
+        satellite_tensor_list = []
         for satellite_arr in satellite_array:
-            # batch_satellite = self.transform(arr)
-            sat_tensor=torch.from_numpy(satellite_arr.astype(np.float32))
-            sat_tensors.append(sat_tensor)
-
-        batch_satellite = torch.cat(sat_tensors, dim=0)
+            satellite_arr = np.transpose(satellite_arr, (2, 1, 0))
+            satellite_tensor = self.sat_transform(satellite_arr.astype(np.float32))
+            satellite_tensor_list.append(satellite_tensor)
+            # sat_tensor=torch.from_numpy(satellite_arr.astype(np.float32))
+            # sat_tensors.append(sat_tensor)
+        # Stack the tensors into a single tensor
+        batch_satellite = torch.stack(satellite_tensor_list)    
+        # batch_satellite = self.sat_transform(satellite_array)
         # batch = batch.unsqueeze(0)
         # batch = batch.unsqueeze(1)
         label=self.transform(label_image)
-        batch_radar = batch_radar.cuda()
-        batch_satellite = batch_satellite.cuda()
+        label = label.unsqueeze(0)
+        batch=torch.cat([batch_radar, batch_satellite], dim=1)
+        batch=batch.cuda()
+        # batch_radar = batch_radar.cuda()
+        # batch_satellite = batch_satellite.cuda()
         label=label.cuda()
         if self.return_original==True:
             original_label_image=self.read_radar_image(self.radar_data_array[idx],True)
             # original_label=self.transform(original_label_image)
             original_label = torch.tensor(original_label_image).unsqueeze(0)
             original_label=original_label.cuda()
-            return batch_radar,label,original_label
-        return batch_radar,batch_satellite, label
+            return batch,label,original_label
+        return batch, label
     
     
