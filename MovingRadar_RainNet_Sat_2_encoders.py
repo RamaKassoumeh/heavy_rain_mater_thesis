@@ -9,7 +9,7 @@ from torch.utils.tensorboard import SummaryWriter
 from RadarFilterImageDataset import RadarFilterImageDataset
 from RadarFilterRainNetSatelliteDataset import RadarFilterRainNetSatelliteDataset
 
-from RainNet_Satellite import RainNet
+from RainNet_Sat_2_encoder import RainNet
 from plotting import plot_images
 
 from convlstm import Seq2Seq
@@ -141,19 +141,19 @@ timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
 train_dataloader = DataLoader(
     dataset=train_dataset,
-    batch_size=5,
+    batch_size=1,
     shuffle=True
 )
 
 validate_loader = DataLoader(
     dataset=validate_data,
-    batch_size=5,
+    batch_size=1,
     shuffle=True
 )
 
 test_loader = DataLoader(
     dataset=test_data,
-    batch_size=5,
+    batch_size=1,
     shuffle=False
 )
 

@@ -177,6 +177,8 @@ class LogCoshThresholdLoss(nn.Module):
 model=RainNet()
 
 model=torch.nn.DataParallel(model)
+no_param=sum(p.numel() for p in model.parameters() if p.requires_grad)
+print(f"number of parameters in the model is {no_param}")
 model.cuda()
 # optim = Adam(model.parameters(), lr=1e-4)
 optim = Adam(model.parameters(), lr=3e-4)
