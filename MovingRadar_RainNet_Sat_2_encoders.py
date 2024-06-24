@@ -199,8 +199,8 @@ class LogCoshThresholdLoss(nn.Module):
 model=RainNet()
 no_param=sum(p.numel() for p in model.parameters() if p.requires_grad)
 print(f"number of parameters in the model is {no_param}")
-model=torch.nn.DataParallel(model)
-model.cuda()
+# model=torch.nn.DataParallel(model)
+# model.cuda()
 # optim = Adam(model.parameters(), lr=1e-4)
 optim = Adam(model.parameters(), lr=3e-4)
 # Define learning rate scheduler
@@ -218,7 +218,7 @@ scheduler = torch.optim.lr_scheduler.MultiStepLR(optim, milestones=[10,6,4], gam
 # criterion_heavy_rain = LogCoshThresholdLoss(transform(np.array([[7.5]])),transform(np.array([[201]])))
 num_epochs = 10
 criterion = LogCoshLoss()
-folder_name='radar_trainer_30M_RainNet_Sat_288_size_log_200_normalize_3d_sat'
+folder_name='radar_trainer_30M_RainNet_Sat_288_size_log_200_normalize_3d_sat_2_encoders'
 # Initializing in a separate cell, so we can easily add more epochs to the same run
 
 writer = SummaryWriter(f'runs/{folder_name}_{timestamp}')

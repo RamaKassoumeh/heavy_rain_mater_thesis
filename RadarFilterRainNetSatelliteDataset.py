@@ -177,10 +177,10 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
         label=self.transform(label_image)
         label = label.unsqueeze(0)
         batch=torch.cat([batch_radar, batch_satellite], dim=1)
-        batch=batch.cuda()
+        # batch=batch.cuda()
         # batch_radar = batch_radar.cuda()
         # batch_satellite = batch_satellite.cuda()
-        label=label.cuda()
+        # label=label.cuda()
         if self.return_original==True:
             original_label_image=self.read_radar_image(self.radar_data_array[idx],True)
             # original_label=self.transform(original_label_image)

@@ -26,6 +26,9 @@ from torchvision import transforms
 import numpy as np
 from sklearn.metrics import confusion_matrix
 
+from tqdm import tqdm
+
+
 # read data from file
 with open("analyse_satellite_IQR.txt", 'r') as file:
     lines = file.readlines()
@@ -141,19 +144,19 @@ timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
 train_dataloader = DataLoader(
     dataset=train_dataset,
-    batch_size=5,
+    batch_size=3,
     shuffle=True
 )
 
 validate_loader = DataLoader(
     dataset=validate_data,
-    batch_size=5,
+    batch_size=3,
     shuffle=True
 )
 
 test_loader = DataLoader(
     dataset=test_data,
-    batch_size=5,
+    batch_size=3,
     shuffle=False
 )
 
@@ -229,7 +232,7 @@ for epoch in range(1, num_epochs + 1):
     acc=0
     total =0
     model.train()
-    for batch_num, (input, target) in enumerate(train_dataloader, 1):
+    for batch_num, (input, target) in enumerate(tqdm(train_dataloader), 1):
         optim.zero_grad()
         output = model(input)
         output_flatten=output.flatten()
@@ -248,7 +251,7 @@ for epoch in range(1, num_epochs + 1):
         # total += target.size(0)
         # print(f"the accurecy is {acc}")
         # print(f"the train loss is {train_loss}")
-        print(f"batch number={batch_num} in epoch {epoch}")
+        # print(f"batch number={batch_num} in epoch {epoch}")
         if batch_num%100 ==0:
             target=inverseTransform(target)
             input=inverseTransform(input)
@@ -264,7 +267,7 @@ for epoch in range(1, num_epochs + 1):
     val_loss = 0
     model.eval()
     with torch.no_grad():
-        for batch_num, (input, target) in enumerate(validate_loader, 1):
+        for batch_num, (input, target) in enumerate(tqdm(validate_loader), 1):
             output = model(input)
             output_flatten=output.flatten()
             target_flatten=target.flatten()
@@ -361,7 +364,7 @@ output_file_path = folder_name+'_results.txt'  # Specify the file path where you
 
 model.eval()
 with torch.no_grad():
-    for batch_num, (input, target) in enumerate(test_loader, 1):
+    for batch_num, (input, target) in enumerate(tqdm(test_loader), 1):
         output = model(input)
         actual_img=inverseTransform(target)
         predicted_img=inverseTransform(output)

@@ -32,7 +32,7 @@ decimal_places = 3
 # Multiply the tensor by 10^decimal_places
 factor = 10 ** decimal_places
 
-folder_name='radar_trainer_30M_RainNet_512_size_log_200'
+folder_name='radar_trainer_30M_RainNet_288_size_log_200_normalize'
 
 model=RainNet()
 model=torch.nn.DataParallel(model)
@@ -157,14 +157,108 @@ def calculate_csi(predicted, actual, category):
     # Calculate CSI
     csi = tp / (tp + fp + fn)
     return csi
+
+
+
+def calculate_fractional_coverage(grid, lower_threshold, upper_threshold, neighborhood_size):
+    """
+    Calculate the fractional coverage of grid points exceeding the given threshold
+    within a specified neighborhood size.
+
+    Parameters:
+    grid (np.ndarray): 2D array of precipitation values.
+    lower_threshold (float): Precipitation lower threshold.
+    upper_threshold (float): Precipitation upper threshold.
+    neighborhood_size (int): Size of the neighborhood to consider.
+
+    Returns:
+    np.ndarray: Fractional coverage for each grid point.
+    """
+    grid = grid.cpu().numpy()  # Move tensor to CPU and convert to numpy array
+    padded_grid = np.pad(grid, pad_width=neighborhood_size // 2, mode='constant', constant_values=0)
+    # fractional_coverage = np.zeros_like(grid, dtype=float)
+
+    # for i in range(grid.shape[2]):
+    #     for j in range(grid.shape[3]):
+    #         neighborhood = padded_grid[:,:,i:i + neighborhood_size, j:j + neighborhood_size]
+    #         exceed_count = np.sum((neighborhood >= lower_threshold) & (neighborhood < upper_threshold))
+    #         total_points = neighborhood.size
+    #         fractional_coverage[i, j] = exceed_count / total_points
+
+    fractional_coverage = np.zeros_like(grid, dtype=float)
+    
+    pad_size = neighborhood_size // 2
+    for b in range(grid.shape[0]):
+        for t in range(grid.shape[1]):
+            padded_grid = np.pad(grid[b, t], pad_width=pad_size, mode='constant', constant_values=0)
+            for i in range(grid.shape[2]):
+                for j in range(grid.shape[3]):
+                    neighborhood = padded_grid[i:i+neighborhood_size, j:j+neighborhood_size]
+                    exceed_count = np.sum((neighborhood >= lower_threshold) & (neighborhood < upper_threshold))
+                    total_points = neighborhood.size
+                    fractional_coverage[b, t, i, j] = exceed_count / total_points
+    
+
+    return fractional_coverage
+
+
+def calculate_fss(observed, forecasted, lower_threshold, upper_threshold, neighborhood_size):
+    """
+    Calculate the Fractional Skill Score (FSS) for the given observed and forecasted precipitation grids
+    using a specified threshold and neighborhood size.
+
+    Parameters:
+    observed (np.ndarray): 2D array of observed precipitation values.
+    forecasted (np.ndarray): 2D array of forecasted precipitation values.
+    lower_threshold (float): Precipitation lower threshold.
+    upper_threshold (float): Precipitation upper threshold.
+    neighborhood_size (int): Size of the neighborhood to consider.
+
+    Returns:
+    float: Fractional Skill Score (FSS).
+    """
+    # Calculate fractional coverage for observed and forecasted grids
+    observed_fractional_coverage = calculate_fractional_coverage(observed, lower_threshold, upper_threshold,
+                                                                 neighborhood_size)
+    forecasted_fractional_coverage = calculate_fractional_coverage(forecasted, lower_threshold, upper_threshold,
+                                                                   neighborhood_size)
+
+    # Calculate Mean Squared Error (MSE) between fractional coverages
+    # mse = np.mean((observed_fractional_coverage - forecasted_fractional_coverage) ** 2)
+
+    # # Calculate reference MSE (MSE for no-skill forecast)
+    # # Assuming no-skill forecast is just the mean of the observed fractional coverage
+    # reference_mse = np.mean(observed_fractional_coverage ** 2)
+
+    # # Calculate FSS
+    # if reference_mse ==0:
+    #     return 0
+    # fss = 1 - (mse / reference_mse)
+
+    # Calculate the numerator and denominator for FSS
+    numerator = np.sum((forecasted_fractional_coverage - observed_fractional_coverage) ** 2)
+    denominator = np.sum(forecasted_fractional_coverage ** 2 + observed_fractional_coverage ** 2)
+    if numerator==denominator ==0:
+        return 1
+    elif denominator==0:
+        return 0
+    # Calculate FSS
+    fss = 1 - (numerator / denominator)
+
+    return fss
+
+
 # Calculate RMSE for each image
 rmse_values = []
 
 # Calculate CSI for each category across all images
 csi_values = {category: [] for category in categories_threshold.keys()}
+
+# Calculate fss for each category across all images
+fss_values = {category: [] for category in categories_threshold.keys()}
 output_file_path = folder_name+'_results.txt'  # Specify the file path where you want to save the results
 spatial_errors = []
-
+neighborhood_size=3
 model.eval()
 with torch.no_grad():
     for batch_num, (input, target) in enumerate(test_loader, 1):
@@ -201,6 +295,9 @@ with torch.no_grad():
             # csi = calculate_csi(predicted_categorized, actual_categorized, category)
             csi=calculate_cat_csi(predicted_flat, actual_flat, category)
             csi_values[category].append(csi)
+            fss = calculate_fss(actual_img, predicted_img, categories_threshold[category][0],
+                        categories_threshold[category][1], neighborhood_size)
+            fss_values[category].append(fss)
         print(f"test batch number={batch_num}")
         if batch_num%10 ==0:
             predicted_img=invert_custom_transform2(predicted_img)
@@ -218,12 +315,19 @@ with open(output_file_path, 'w') as file:
 
     # Calculate the average CSI for each category across all images
     average_csi = {category: np.mean(csi_values[category]) for category in categories_threshold.keys()}
+    # Calculate the average FSS for each category across all images
+    average_fss = {category: np.mean(fss_values[category]) for category in categories_threshold.keys()}
 
     # Display the results
     print("Average CSI for each category across all images:")
     for category, avg_csi in average_csi.items():
         print(f"{category}: {avg_csi}")
         file.write(f"\nAverage CSI for category: {category}: {avg_csi}\n")
+    # Display the results
+    print("Average FSS for each category across all images:")
+    for category, avg_fss in average_fss.items():
+        print(f"{category}: {avg_fss}")
+        file.write(f"\nAverage FSS for category: {category}: {avg_fss}\n")
     file.close()
 
 # Create Heatmaps
