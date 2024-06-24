@@ -231,7 +231,7 @@ for epoch in range(1, num_epochs + 1):
     train_loss = 0
     acc=0
     total =0
-    model.train()
+    model.train() 
     for batch_num, (input, target) in enumerate(tqdm(train_dataloader), 1):
         optim.zero_grad()
         output = model(input)
