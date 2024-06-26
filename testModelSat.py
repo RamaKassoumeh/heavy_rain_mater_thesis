@@ -7,9 +7,9 @@ import torch.nn as nn
 from torch.optim import Adam
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
-from RadarFilterRainNet3DDataset import RadarFilterRainNetDataset
+from RadarFilterRainNetSatelliteDataset import RadarFilterRainNetSatelliteDataset
 
-from RainNet3D import RainNet
+from RainNet_Satellite import RainNet
 from plotting import plot_images
 
 from convlstm import Seq2Seq
@@ -20,26 +20,26 @@ import glob
 from PIL import Image
 import io
 
-
-
 from torchvision import transforms
 import numpy as np
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
+
+import ast
 
 decimal_places = 3
 
 # Multiply the tensor by 10^decimal_places
 factor = 10 ** decimal_places
 
-folder_name='radar_trainer_30M_RainNet_288_size_log_200_normalize_3d_2018'
+file_name='radar_trainer_30M_RainNet_Sat_288_size_log_200_normalize_3d_sat'
 
 model=RainNet()
 model=torch.nn.DataParallel(model)
 model.cuda()
-model.load_state_dict(torch.load(folder_name+'_model.pth'), strict=False)
+model.load_state_dict(torch.load(file_name+'_model.pth'), strict=False)
 # from ipywidgets import widgets, HBox
-radar_data_folder_path = '../RadarData_test_18/'
+radar_data_folder_path = '/raid/dataset/RadarData_test_18/'
 # Use GPU if available
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -50,6 +50,26 @@ min_value=0
 max_value=200
 mean=0.21695
 std=0.9829
+
+# read data from file
+with open("analyse_satellite_IQR.txt", 'r') as file:
+    lines = file.readlines()
+
+data = {}
+for line in lines:
+    key, value = line.split(':', 1)
+    key = key.strip()
+    value = value.strip()
+    value = value.replace('array', '')  # Remove 'array' to make it a valid dictionary
+    data[key] = ast.literal_eval(value)
+
+# Extracting the dictionaries
+iqr_values = data.get("IQR values", {})
+bands_min_values = data.get("Min values", {})
+bands_max_values = data.get("Max values", {})
+outliers_count_percentage_values = data.get("outliers count percentage values", {})
+
+
 # # make transforms
 # def custom_transform1(x):
 #     # Use PyTorch's where function to apply the transformation element-wise
@@ -153,14 +173,27 @@ inverseTransform= transforms.Compose([
     transforms.Lambda(lambda x: x) 
 ])
 
-test_data = RadarFilterRainNetDataset(
-    img_dir='../RadarData_test_18/',
+def normalize_Satellite(x):
+    for i in range(x.size(0)):
+        key=list(bands_min_values.keys())[i]
+        x[i] = (x[i]-bands_min_values[key])/(bands_max_values[key]-bands_min_values[key])
+    return x
+
+sat_transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Lambda(normalize_Satellite),
+    ])
+
+test_data = RadarFilterRainNetSatelliteDataset(
+    img_dir='/raid/dataset/RadarData_test_18/',
+    sat_dir='/raid/dataset/SatelliteData',
     transform=transform,
-    inverse_transform=inverseTransform
+    inverse_transform=inverseTransform,
+    sat_transform=sat_transform
 )
 test_loader = DataLoader(
     dataset=test_data,
-    batch_size=50,
+    batch_size=15,
     shuffle=False
 )
 
@@ -316,7 +349,7 @@ csi_values = {category: [] for category in categories_threshold.keys()}
 
 # Calculate fss for each category across all images
 fss_values = {category: [] for category in categories_threshold.keys()}
-output_file_path = folder_name+'_test_results.txt'  # Specify the file path where you want to save the results
+output_file_path = file_name+'_test_results.txt'  # Specify the file path where you want to save the results
 spatial_errors = []
 neighborhood_size=3
 model.eval()
@@ -329,7 +362,7 @@ with torch.no_grad():
         if batch_num%100 ==0:
             input=inverseTransform(input)
             # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',folder_name)
-            plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,actual_img[0,0],predicted_img[0,0]], 2, 4,1,batch_num,'test',folder_name)
+            plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,actual_img[0,0],predicted_img[0,0]], 2, 4,1,batch_num,'test',file_name)
         
          # Calculate the squared differences between actual and predicted values
         squared_differences = (actual_img - predicted_img) ** 2

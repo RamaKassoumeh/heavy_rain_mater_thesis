@@ -12,11 +12,11 @@ from PIL import Image
 import PIL
 # from osgeo import gdal
 from rasterio.enums import Resampling
-
+import ast
 
 class RadarFilterRainNetSatelliteDataset(Dataset):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    def __init__(self, img_dir,sat_dir, transform=None,inverse_transform=None,return_original=False,sat_transform=None):
+    def __init__(self, img_dir,sat_dir, transform=None,inverse_transform=None,return_original=False,sat_transform=None,random_satellite=False):
         self.img_dir = img_dir
         self.sat_dir=sat_dir
         self.return_original=return_original
@@ -33,21 +33,7 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
         self.resampling_method='lanczos'
         self.target_width=288
         self.target_height=288
-        # self.resampling_methods = {
-        # 'near': gdal.GRA_NearestNeighbour,
-        # 'bilinear': gdal.GRA_Bilinear,
-        # 'cubic': gdal.GRA_Cubic,
-        # 'cubicspline': gdal.GRA_CubicSpline,
-        # 'lanczos': gdal.GRA_Lanczos
-        # }
-        # # Define options for gdal.Warp
-        # self.warp_options = gdal.WarpOptions(
-        #     format='MEM',
-        #     width=self.target_width,
-        #     height=self.target_height,
-        #     resampleAlg=self.resampling_methods[self.resampling_method]
-        # )
-
+        self.random_satellite=random_satellite
         # Walk through all directories and files
         for radar_folders in sorted(os.listdir(self.img_dir)):
             # Construct the full path to the folder
@@ -64,6 +50,22 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
             self.satellite_names.append(os.path.join(self.sat_dir, satellite_file))
         self.radar_data_array=np.load(img_dir+'/radar_data_array.npy')
         self.satellite_data_array=np.load(img_dir+'/satellite_data_array.npy')
+
+        # read data from file of low and high values for each band
+        with open("analyse_satellite_IQR.txt", 'r') as file:
+            lines = file.readlines()
+
+        data = {}
+        for line in lines:
+            key, value = line.split(':', 1)
+            key = key.strip()
+            value = value.strip()
+            value = value.replace('array', '')  # Remove 'array' to make it a valid dictionary
+            data[key] = ast.literal_eval(value)
+
+        # Extracting the dictionaries
+        self.bands_min_values = data.get("Min values", {})
+        self.bands_max_values = data.get("Max values", {})
 
     def __len__(self):
 
@@ -137,6 +139,19 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
                 resampling=Resampling.lanczos
             )
         return data_array
+    
+    def generate_random_satellite_data(self):
+
+        # Specify the shape of the array
+        shape = (11, self.target_height, self.target_width)
+
+        # Initialize an empty array with the specified shape and dtype uint16
+        random_array = np.empty(shape, dtype=np.uint16)
+
+        # Fill the array with random values for each of the 11 dimensions
+        for i in range(shape[0]):
+            key=list(self.bands_min_values.keys())[i]
+            random_array[i] = np.random.randint(low=self.bands_min_values[key], high=self.bands_max_values[key], size=(shape[1], shape[2]), dtype=np.uint16)
         
     def __getitem__(self, idx):
         radar_array=[]  
@@ -146,7 +161,10 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
             radar_image=self.read_radar_image(self.radar_data_array[idx]-i)
             radar_array.append(radar_image)
             # satellite_image=self.read_satellite_image(self.satellite_data_array[idx]-i)
-            satellite_image=self.read_updample_satellite_image(self.satellite_data_array[idx]-i)
+            if self.random_satellite==True:
+                satellite_image=self.generate_random_satellite_data()
+            else:
+                satellite_image=self.read_updample_satellite_image(self.satellite_data_array[idx]-i)
             satellite_array.append(satellite_image)
 
         label_image=self.read_radar_image(self.radar_data_array[idx])
