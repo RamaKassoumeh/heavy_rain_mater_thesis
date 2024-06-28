@@ -133,3 +133,53 @@ def plot_images(image_list, row, col, epoch, batch_num, name,folder_name):
 #         os.mkdir(f"output/image_radar_trainer_128_128_30M_filter_data_{timestamp}") 
 
 #     plt.savefig(f"output/image_radar_trainer_128_128_30M_filter_data_{timestamp}/{name}_{epoch}_{batch_num}")
+
+
+def plot_image(image):
+    # Create a figure and divide it into two areas
+    fig = plt.figure(figsize=(1,1))  # Set overall figure size
+    gs = fig.add_gridspec(1, 2, width_ratios=[5, 1])  # Divide into two areas, one with 3 times width
+
+    # Create subplots for the smaller area to plot rectangles
+    ax_smaller = fig.add_subplot(gs[1])
+
+    # Plot rectangles with colors in the smaller area
+    for i, (start, end, color) in enumerate(ranges):
+        rect = patches.Rectangle((0, i), 6, 1, linewidth=1, facecolor=color)
+        ax_smaller.add_patch(rect)
+        ax_smaller.text(1, i + 0.5, f'{start}-{end}' if start>=0 else 'undefined', verticalalignment='center', horizontalalignment='center',
+                        color='white' if i > 9 else 'black')
+
+    ax_smaller.set_xlim(0, 2)  # Adjust xlim to fit rectangles and text
+    ax_smaller.set_ylim(0, len(ranges))  # Adjust ylim to fit rectangles and text
+    ax_smaller.axis('off')  # Turn off axis
+
+    # Create subplots for the larger area to display 8 images
+    axs_larger = fig.add_subplot(gs[0])
+    axs_larger.set_xticks([])  # Remove x ticks
+    axs_larger.set_yticks([])  # Remove y ticks
+    axs_larger.axis('off')  # Turn off axis
+    # Plot images in the larger area
+
+    # Create a grid of subplots within the larger subplot
+    inner_grid = np.zeros((1, 1), dtype=object)
+    inner_grid[0, 0] = fig.add_subplot(gs[0].subgridspec(1,1)[0, 0])
+
+    # for ax, image, title in zip(inner_grid.flat, image_list, [f'Image {i}' for i in range(1, len(image_list)+1)]):
+    #     # image = image_list[i * col + j]
+    #     image = image.detach().cpu().numpy()
+    #     # image = image.astype(np.uint8)
+    #     ax.imshow(image, cmap=cmap, vmin=0, vmax=200)
+    #     ax.axis('off')
+
+    ax_grid = inner_grid.flatten()
+    image = image.detach().cpu().numpy()
+    image = np.where(image < -0.1, -999, image)
+
+    ax_grid[0].imshow(image[0,:,:], cmap=cmap, vmin=-999, vmax=1000)  # Assuming grayscale images
+
+    plt.tight_layout()
+    plt.savefig(f"output/radar_image")
+    plt.close()
+
+

@@ -39,7 +39,7 @@ model=torch.nn.DataParallel(model)
 model.cuda()
 model.load_state_dict(torch.load(file_name+'_model.pth'), strict=False)
 # from ipywidgets import widgets, HBox
-radar_data_folder_path = '/raid/dataset/RadarData_test_18/'
+radar_data_folder_path = '../RadarData_test_18/'
 # Use GPU if available
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -185,11 +185,12 @@ sat_transform = transforms.Compose([
     ])
 
 test_data = RadarFilterRainNetSatelliteDataset(
-    img_dir='/raid/dataset/RadarData_test_18/',
-    sat_dir='/raid/dataset/SatelliteData',
+    img_dir='../RadarData_test_18/',
+    sat_dir='../SatelliteData',
     transform=transform,
     inverse_transform=inverseTransform,
-    sat_transform=sat_transform
+    sat_transform=sat_transform,
+    random_satellite=True
 )
 test_loader = DataLoader(
     dataset=test_data,

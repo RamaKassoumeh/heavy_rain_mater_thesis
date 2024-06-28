@@ -115,7 +115,7 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
             data_array = dataset.read()
             return data_array
 
-    def read_updample_satellite_image(self,indx):
+    def read_upsample_satellite_image(self,indx):
         satellite_file_name =  self.satellite_names[indx]
         # satellite_dataset = gdal.Open(satellite_file_name)
         # # Perform the upsampling
@@ -138,7 +138,7 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
                 out_shape=(src.count, self.target_height, self.target_width),
                 resampling=Resampling.lanczos
             )
-        return data_array
+        return data_array[3:,:,:]
     
     def generate_random_satellite_data(self):
 
@@ -165,7 +165,7 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
             if self.random_satellite==True:
                 satellite_image=self.generate_random_satellite_data()
             else:
-                satellite_image=self.read_updample_satellite_image(self.satellite_data_array[idx]-i)
+                satellite_image=self.read_upsample_satellite_image(self.satellite_data_array[idx]-i)
             satellite_array.append(satellite_image)
 
         label_image=self.read_radar_image(self.radar_data_array[idx])

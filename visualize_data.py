@@ -5,7 +5,7 @@ import torch
 from RadarFilterImageDataset import RadarFilterImageDataset
 from RadarFilterRainNetDataset import RadarFilterRainNetDataset
 from RadarFilterRainNetSatelliteDataset import RadarFilterRainNetSatelliteDataset
-from plotting import plot_images
+from plotting import plot_images,plot_image
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 import numpy as np
@@ -147,6 +147,7 @@ for batch_num, (input, target,original_target) in enumerate(train_dataloader, 1)
     # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],original_target[0][0]],2, 4,1,batch_num,'test',"test_visualization")
     # plot_images([input[0,input.shape[1]-1,0],input[0,input.shape[1]-2,0],input[0,input.shape[1]-1,0],input[0,input.shape[1]-2,0],input[0,input.shape[1]-1,0],input[0,input.shape[1]-2,0] ,target[0][0],original_target[0][0]],2, 4,1,batch_num,'test',"test_visualization")
     plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4] ,target[0][0],original_target[0][0]],2, 4,1,batch_num,'test',"test_visualization")
+    plot_image(input[0,input.shape[1]-1])
     if counter >=100:
         break
 
