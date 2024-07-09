@@ -32,7 +32,7 @@ decimal_places = 3
 # Multiply the tensor by 10^decimal_places
 factor = 10 ** decimal_places
 
-file_name='radar_trainer_30M_RainNet_Sat_288_size_log_200_normalize_3d_sat'
+file_name='radar_trainer_30M_RainNet_Sat_288_size_log_200_normalize_3d_sat_8bands'
 
 model=RainNet()
 model=torch.nn.DataParallel(model)
@@ -190,7 +190,7 @@ test_data = RadarFilterRainNetSatelliteDataset(
     transform=transform,
     inverse_transform=inverseTransform,
     sat_transform=sat_transform,
-    random_satellite=True
+    random_satellite=False
 )
 test_loader = DataLoader(
     dataset=test_data,
@@ -217,7 +217,6 @@ def calculate_cat_csi(predicted, actual, category):
     predicted_label=predicted.detach().cpu().numpy().astype(int)
     # Calculate confusion matrix
     cm = confusion_matrix((actual_label>= categories_threshold[category][0]).astype(int) & (actual_label< categories_threshold[category][1]).astype(int), (predicted_label>= categories_threshold[category][0]).astype(int) & (predicted_label< categories_threshold[category][1]).astype(int), labels=[0, 1])
-    # Check the shape of the confusion matrix
     # Check the shape of the confusion matrix
     if cm.shape == (2, 2):
         # Unpack the confusion matrix values

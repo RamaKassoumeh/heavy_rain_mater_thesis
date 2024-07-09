@@ -7,9 +7,9 @@ import torch.nn as nn
 from torch.optim import Adam
 from torch.utils.tensorboard import SummaryWriter
 from RadarFilterImageDataset import RadarFilterImageDataset
-from RadarFilterRainNetSatellite_8bandsDataset import RadarFilterRainNetSatelliteDataset
+from RadarFilterRainNetSatelliteDataset import RadarFilterRainNetSatelliteDataset
 
-from RainNet_Satellite_8_bands import RainNet
+from RainNet_Satellite import RainNet
 from plotting import plot_images,plot_image
 
 from convlstm import Seq2Seq
@@ -153,13 +153,13 @@ train_dataloader = DataLoader(
 
 validate_loader = DataLoader(
     dataset=validate_data,
-    batch_size=3,
+    batch_size=1,
     shuffle=True
 )
 
 test_loader = DataLoader(
     dataset=test_data,
-    batch_size=3,
+    batch_size=1,
     shuffle=False
 )
 
@@ -222,9 +222,9 @@ scheduler = torch.optim.lr_scheduler.MultiStepLR(optim, milestones=[10,6,4], gam
 # criterion_moderate_rain = LogCoshThresholdLoss(transform(np.array([[2.5]])),transform(np.array([[7.5]])))
 # # 73.5-200
 # criterion_heavy_rain = LogCoshThresholdLoss(transform(np.array([[7.5]])),transform(np.array([[201]])))
-num_epochs = 10
+num_epochs = 50
 criterion = LogCoshLoss()
-folder_name='radar_trainer_30M_RainNet_Sat_288_size_log_200_normalize_3d_sat_8bands'
+folder_name='radar_trainer_30M_RainNet_Sat_288_size_log_200_normalize_3d_sat_8bands_epcoh'
 # Initializing in a separate cell, so we can easily add more epochs to the same run
 
 writer = SummaryWriter(f'runs/{folder_name}_{timestamp}')
