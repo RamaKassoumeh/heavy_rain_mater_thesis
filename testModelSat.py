@@ -9,7 +9,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 from RadarFilterRainNetSatelliteDataset import RadarFilterRainNetSatelliteDataset
 
-from RainNet_Satellite import RainNet
+from RainNet_Satellite_4_layers import RainNet
 from plotting import plot_images
 
 from convlstm import Seq2Seq
@@ -24,6 +24,7 @@ from torchvision import transforms
 import numpy as np
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
+from sklearn.metrics import mean_squared_error
 
 import ast
 
@@ -32,14 +33,14 @@ decimal_places = 3
 # Multiply the tensor by 10^decimal_places
 factor = 10 ** decimal_places
 
-file_name='radar_trainer_30M_RainNet_Sat_288_size_log_200_normalize_3d_sat_8bands'
+file_name='radar_trainer_30M_RainNet_Sat_288_size_log_200_normalize_3d_sat'
 
 model=RainNet()
 model=torch.nn.DataParallel(model)
 model.cuda()
-model.load_state_dict(torch.load(file_name+'_model.pth'), strict=False)
+model.load_state_dict(torch.load(f"models/{file_name}_model.pth"), strict=False)
 # from ipywidgets import widgets, HBox
-radar_data_folder_path = '../RadarData_test_18/'
+radar_data_folder_path = '/raid/heavyrain_dataset/RadarData_test_18/'
 # Use GPU if available
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -69,53 +70,6 @@ bands_min_values = data.get("Min values", {})
 bands_max_values = data.get("Max values", {})
 outliers_count_percentage_values = data.get("outliers count percentage values", {})
 
-
-# # make transforms
-# def custom_transform1(x):
-#     # Use PyTorch's where function to apply the transformation element-wise
-#     return torch.where(x >= 0, x + 1, x)
-# def custom_transform2(x):
-#     # Use PyTorch's where function to apply the transformation element-wise
-#     return torch.where(x < 0, 0, x)
-
-
-# transform = transforms.Compose([
-#     transforms.ToTensor(),
-#     # transforms.Lambda(lambda x: x.unsqueeze(0))  ,# Add a new dimension at position 0
-#     # transforms.Lambda(lambda x: x.cuda()) , # send data to cuda
-#     # transforms.Normalize(mean=[mean,],
-#     #                          std=[std,],)
-#     # transforms.Lambda(lambda x: (x-min_value)/(max_value-min_value)),
-#     # transforms.Lambda(lambda x: torch.log2(x+1))
-#     transforms.Lambda(custom_transform1) ,
-#     transforms.Lambda(custom_transform2) ,
-#     # transforms.Lambda(lambda x: torch.log(x+1)),
-#      transforms.Lambda(lambda x:  (torch.log(x+1) / torch.log(torch.tensor(max_value))).float()),
-#     # transforms.Lambda(lambda x: x.float())
-#     transforms.Lambda(lambda x: torch.round(x*factor)/factor) 
-
-    
-# ])
-# def invert_custom_transform1(x):
-#     # Use PyTorch's where function to apply the transformation element-wise
-#     return torch.where(x > 0, x-1, x)
-# def invert_custom_transform2(x):
-#     # Use PyTorch's where function to apply the transformation element-wise
-#     return torch.where(x <= 0, -999, x) 
-
-# inverseTransform= transforms.Compose([
-#     # transforms.Lambda(lambda x: x.unsqueeze(0))  ,# Add a new dimension at position 0
-#     # transforms.Lambda(lambda x: x.cuda()) , # send data to cuda
-#     # transforms.Normalize(mean=[-mean/std,],
-#                             #  std=[1/std,])
-#     # transforms.Lambda(lambda x: torch.exp(x)-1),
-#     transforms.Lambda(lambda x: torch.pow(max_value, x)-1),
-#     transforms.Lambda(invert_custom_transform2) ,
-#     transforms.Lambda(invert_custom_transform1) ,
-#     # transforms.Lambda(invert_custom_transform2) ,
-#     # transforms.Lambda(lambda x: (x*(max_value - min_value))+min_value)
-#     transforms.Lambda(lambda x: torch.round(x*factor)/factor) 
-# ])
 
 def custom_transform1(x):
     # Use PyTorch's where function to apply the transformation element-wise
@@ -185,8 +139,8 @@ sat_transform = transforms.Compose([
     ])
 
 test_data = RadarFilterRainNetSatelliteDataset(
-    img_dir='../RadarData_test_18/',
-    sat_dir='../SatelliteData',
+    img_dir='/raid/heavyrain_dataset/RadarData_test_18/',
+    sat_dir='/raid/heavyrain_dataset/SatelliteData',
     transform=transform,
     inverse_transform=inverseTransform,
     sat_transform=sat_transform,
@@ -204,7 +158,28 @@ test_loader = DataLoader(
 # thresholds = [(-999, -0.1),(-0.1, 2.5), (2.5, 15), (15, 30), (30, 200)]  # Adjust based on your data
 
 
+def filter_negative_values(y_true, y_pred):
+    # Flatten the arrays to 1D
+    y_true_flat = y_true.flatten()
+    y_pred_flat = y_pred.flatten()
+    
+    # Create a mask for values >= 0 in both actual and predicted
+    mask = (y_true_flat >= 0)
+    
+    # Apply the mask to filter out negative values
+    y_true_filtered = y_true_flat[mask]
+    y_pred_filtered = y_pred_flat[mask]
+    
+    return y_true_filtered, y_pred_filtered
+
+def calculate_filtered_mse(y_true, y_pred):
+    y_true_filtered, y_pred_filtered = filter_negative_values(y_true, y_pred)
+    mse = mean_squared_error(y_true_filtered, y_pred_filtered)
+    return mse
+
 categories_threshold={'undefined':(-999, 0),'light rain':(0, 2.5), 'moderate rain':(2.5, 7.5), 'heavy rain':(7.5, 50),'Violent rain':(50, 201)}# Function to categorize pixel values based on thresholds
+# categories_threshold={'undefined':(-999, 0),'light rain':(0, 2), 'moderate rain':(2, 5), 'heavy rain':(5, 10),'Violent rain':(10, 201)}# Function to categorize pixel values based on thresholds
+
 def categorize_pixel(value, thresholds, categories):
     for i, (lower, upper) in enumerate(thresholds):
         if lower <= value < upper:
@@ -225,7 +200,7 @@ def calculate_cat_csi(predicted, actual, category):
         # Calculate CSI using the formula
         if tp + fp + fn == 0:
             # Handle the case where TP + FP + FN is zero
-            csi = 1 
+            csi = 1   
         else:
             # Calculate CSI
             csi = tp / (tp + fp + fn)
@@ -332,9 +307,9 @@ def calculate_fss(observed, forecasted, lower_threshold, upper_threshold, neighb
     numerator = np.sum((forecasted_fractional_coverage - observed_fractional_coverage) ** 2)
     denominator = np.sum(forecasted_fractional_coverage ** 2 + observed_fractional_coverage ** 2)
     if numerator==denominator ==0:
-        return 1
+        return 1 
     elif denominator==0:
-        return 0
+        return 1
     # Calculate FSS
     fss = 1 - (numerator / denominator)
 
@@ -349,7 +324,8 @@ csi_values = {category: [] for category in categories_threshold.keys()}
 
 # Calculate fss for each category across all images
 fss_values = {category: [] for category in categories_threshold.keys()}
-output_file_path = file_name+'_test_results.txt'  # Specify the file path where you want to save the results
+output_file_path = f'results/{file_name}_test_results.txt'  # Specify the file path where you want to save the results
+
 spatial_errors = []
 neighborhood_size=3
 model.eval()
@@ -365,13 +341,15 @@ with torch.no_grad():
             plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,actual_img[0,0],predicted_img[0,0]], 2, 4,1,batch_num,'test',file_name)
         
          # Calculate the squared differences between actual and predicted values
-        squared_differences = (actual_img - predicted_img) ** 2
+        # squared_differences = (actual_img - predicted_img) ** 2
     
         # Calculate the mean of the squared differences
-        mean_squared_error = np.mean(squared_differences.detach().cpu().numpy())
+        # mean_squared_error = np.mean(squared_differences.detach().cpu().numpy())
         
         # Calculate RMSE
-        rmse = np.sqrt(mean_squared_error)
+        mse = calculate_filtered_mse(actual_img.detach().cpu().numpy(), predicted_img.detach().cpu().numpy())
+        rmse = np.sqrt(mse)
+        # rmse = np.sqrt(mean_squared_error)
         
         # Append RMSE to list
         rmse_values.append(rmse)
@@ -407,7 +385,7 @@ with open(output_file_path, 'w') as file:
     file.write(f"\nAverage RMSE across all images: {average_rmse}\n")
 
     # Calculate the average CSI for each category across all images
-    average_csi = {category: np.mean(csi_values[category]) for category in categories_threshold.keys()}
+    average_csi = {category: np.nanmean(csi_values[category]) for category in categories_threshold.keys()}
     # Calculate the average FSS for each category across all images
     average_fss = {category: np.mean(fss_values[category]) for category in categories_threshold.keys()}
 

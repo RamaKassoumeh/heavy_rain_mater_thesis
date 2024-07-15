@@ -1,5 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
+import PIL
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -31,7 +32,7 @@ decimal_places = 3
 
 # Multiply the tensor by 10^decimal_places
 factor = 10 ** decimal_places
-
+timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 folder_name='radar_trainer_30M_RainNet_288_size_log_200_normalize_3d_2018'
 
 model=RainNet()
@@ -48,54 +49,8 @@ print(device)
 # MovingMNIST = np.load('mnist_test_seq.npy').transpose(1, 0, 2, 3)
 min_value=0
 max_value=200
-mean=0.21695
-std=0.9829
-# # make transforms
-# def custom_transform1(x):
-#     # Use PyTorch's where function to apply the transformation element-wise
-#     return torch.where(x >= 0, x + 1, x)
-# def custom_transform2(x):
-#     # Use PyTorch's where function to apply the transformation element-wise
-#     return torch.where(x < 0, 0, x)
 
 
-# transform = transforms.Compose([
-#     transforms.ToTensor(),
-#     # transforms.Lambda(lambda x: x.unsqueeze(0))  ,# Add a new dimension at position 0
-#     # transforms.Lambda(lambda x: x.cuda()) , # send data to cuda
-#     # transforms.Normalize(mean=[mean,],
-#     #                          std=[std,],)
-#     # transforms.Lambda(lambda x: (x-min_value)/(max_value-min_value)),
-#     # transforms.Lambda(lambda x: torch.log2(x+1))
-#     transforms.Lambda(custom_transform1) ,
-#     transforms.Lambda(custom_transform2) ,
-#     # transforms.Lambda(lambda x: torch.log(x+1)),
-#      transforms.Lambda(lambda x:  (torch.log(x+1) / torch.log(torch.tensor(max_value))).float()),
-#     # transforms.Lambda(lambda x: x.float())
-#     transforms.Lambda(lambda x: torch.round(x*factor)/factor) 
-
-    
-# ])
-# def invert_custom_transform1(x):
-#     # Use PyTorch's where function to apply the transformation element-wise
-#     return torch.where(x > 0, x-1, x)
-# def invert_custom_transform2(x):
-#     # Use PyTorch's where function to apply the transformation element-wise
-#     return torch.where(x <= 0, -999, x) 
-
-# inverseTransform= transforms.Compose([
-#     # transforms.Lambda(lambda x: x.unsqueeze(0))  ,# Add a new dimension at position 0
-#     # transforms.Lambda(lambda x: x.cuda()) , # send data to cuda
-#     # transforms.Normalize(mean=[-mean/std,],
-#                             #  std=[1/std,])
-#     # transforms.Lambda(lambda x: torch.exp(x)-1),
-#     transforms.Lambda(lambda x: torch.pow(max_value, x)-1),
-#     transforms.Lambda(invert_custom_transform2) ,
-#     transforms.Lambda(invert_custom_transform1) ,
-#     # transforms.Lambda(invert_custom_transform2) ,
-#     # transforms.Lambda(lambda x: (x*(max_value - min_value))+min_value)
-#     transforms.Lambda(lambda x: torch.round(x*factor)/factor) 
-# ])
 
 def custom_transform1(x):
     # Use PyTorch's where function to apply the transformation element-wise
@@ -163,7 +118,71 @@ test_loader = DataLoader(
     batch_size=200,
     shuffle=False
 )
+def read_radar_image(event_path):
+        try:
+            img_path =  event_path
+            
+            file = h5py.File(img_path, 'r')
+            a_group_key = list(file.keys())[0]
+            dataset_DXk = file.get(a_group_key)
 
+            ds_arr = dataset_DXk.get('image')[:]  # the image data in an array of floats
+            
+            # print((np.count_nonzero(ds_arr)/ ds_arr.size) * 100)
+            # print((np.count_nonzero(ds_arr)/ ds_arr.size) * 100)
+            gain_rate=dataset_DXk.get('what').attrs["gain"]
+            ds_arr = np.where(ds_arr >0, ds_arr * gain_rate, ds_arr)
+
+            ds_arr=np.round(ds_arr,3)
+            ds_arr = np.where(ds_arr >200, 200, ds_arr)
+            # Convert the 2D array to a PIL Image           
+            image = Image.fromarray(ds_arr[137:436, 58:357]) # get only NRW radar area
+            resized_image = image.resize((288, 288),PIL.Image.NEAREST )
+                    
+            # Convert the resized image back to a 2D NumPy array
+            resized_image = np.array(resized_image)
+            # resized_image=self.transform(resized_image)
+            file.close()        
+            return resized_image # ds_arr[110:366,110:366]
+        except Exception as e:
+            print(e)
+            print(img_path)
+            raise e
+        
+def getitem(event_path):
+        resized_radar_array=[] 
+        directory, filename = os.path.split(event_path)
+        prefix, extension = os.path.splitext(filename)
+
+        date_time_obj = datetime.strptime(prefix[2:12], '%y%m%d%H%M')
+        # read 6 frames as input (0.5 hours), the current is the target
+        for i in range(1, 7):
+            five_minutes_before = date_time_obj - timedelta(minutes=5*i)
+
+            previous_file_name = f"{prefix[0:2]}{five_minutes_before.strftime('%y%m%d%H%M')}{extension}"
+
+            previous_file_path = os.path.join(os.path.split(directory)[0],previous_file_name[2:8], previous_file_name) 
+            resized_image=read_radar_image(previous_file_path)
+            resized_radar_array.append(resized_image)
+
+        label_image=read_radar_image(event_path)
+
+        resized_radar_array=np.stack(resized_radar_array, axis=2)
+        
+        # Add channel dim, scale pixels between 0 and 1, send to GPU
+        # batch = torch.tensor(resized_radar_array).unsqueeze(0)
+        
+        # label = torch.tensor(label_image).unsqueeze(0)
+        batch = transform(resized_radar_array)
+        # add depth diminsion
+        batch = batch.unsqueeze(1)
+        batch = batch.unsqueeze(0)
+        label=transform(label_image)
+        label = label.unsqueeze(0)
+        label = label.unsqueeze(0)
+        batch = batch.cuda()
+        label=label.cuda()
+        return batch, label
 # test phase
 # Define the rain categories and thresholds
 # categories = ['undefined','light rain', 'moderate rain', 'heavy rain','violent rain']
@@ -338,63 +357,43 @@ csi_values = {category: [] for category in categories_threshold.keys()}
 
 # Calculate fss for each category across all images
 fss_values = {category: [] for category in categories_threshold.keys()}
-output_file_path = f'results/{folder_name}_test_results.txt'  # Specify the file path where you want to save the results
+output_file_path = f'results/{folder_name}_test_results_{timestamp}.txt'  # Specify the file path where you want to save the results
 spatial_errors = []
 neighborhood_size=3
 model.eval()
+
 with torch.no_grad():
-    for batch_num, (input, target) in enumerate(tqdm(test_loader), 1):
-        output = model(input)
-        actual_img=inverseTransform(target)
-        predicted_img=inverseTransform(output)
+    input, target = getitem('../RadarData_test_18/181209/hd1812090945.scu')
+    output = model(input)
+    actual_img=inverseTransform(target)
+    predicted_img=inverseTransform(output)
+    input=inverseTransform(input)
+    plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,actual_img[0,0],predicted_img[0,0]], 2, 4,1,1,'test',folder_name)
         
-        if batch_num%100 ==0:
-            input=inverseTransform(input)
-            # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',folder_name)
-            plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,actual_img[0,0],predicted_img[0,0]], 2, 4,1,batch_num,'test',folder_name)
+    # Calculate RMSE
+    mse = calculate_filtered_mse(actual_img.detach().cpu().numpy(), predicted_img.detach().cpu().numpy())
+    rmse = np.sqrt(mse)
         
-         # Calculate the squared differences between actual and predicted values
-        # squared_differences = (actual_img - predicted_img) ** 2
-    
-        # Calculate the mean of the squared differences
-        # mean_squared_error = np.mean(squared_differences.detach().cpu().numpy())
-        
-        # Calculate RMSE
-        mse = calculate_filtered_mse(actual_img.detach().cpu().numpy(), predicted_img.detach().cpu().numpy())
-        rmse = np.sqrt(mse)
-        
-        # Append RMSE to list
-        rmse_values.append(rmse)
+
         # Flatten the images to 1D arrays for comparison
-        actual_flat = actual_img.flatten()
-        predicted_flat = predicted_img.flatten()
+    actual_flat = actual_img.flatten()
+    predicted_flat = predicted_img.flatten()
         
         # Categorize pixel values
         # actual_categorized = np.array([categorize_pixel(value, thresholds, categories) for value in actual_flat])
         # predicted_categorized = np.array([categorize_pixel(value, thresholds, categories) for value in predicted_flat])
         
         # Calculate CSI for each category
-        for category in categories_threshold.keys():
-            # csi = calculate_csi(predicted_categorized, actual_categorized, category)
-            csi=calculate_cat_csi(predicted_flat, actual_flat, category)
-            csi_values[category].append(csi)
-            fss = calculate_fss(actual_img, predicted_img, categories_threshold[category][0],
+    for category in categories_threshold.keys():
+        csi=calculate_cat_csi(predicted_flat, actual_flat, category)
+        csi_values[category].append(csi)
+        fss = calculate_fss(actual_img, predicted_img, categories_threshold[category][0],
                         categories_threshold[category][1], neighborhood_size)
-            fss_values[category].append(fss)
-        #print(f"test batch number={batch_num}")
-        if batch_num%10 ==0:
-            predicted_img=invert_custom_transform2(predicted_img)
-            spatial_error = check_spetial_residual(actual_img,predicted_img)
-            spatial_errors.append(spatial_error)
-
-
-# Calculate the average RMSE across all images
-average_rmse = np.mean(rmse_values)
-
-# Display the results
-print(f"Average RMSE across all images: {average_rmse}")
+        fss_values[category].append(fss)
+        
+print(f"Average RMSE across all images: {rmse}")
 with open(output_file_path, 'w') as file:
-    file.write(f"\nAverage RMSE across all images: {average_rmse}\n")
+    file.write(f"\nAverage RMSE across all images: {rmse}\n")
 
     # Calculate the average CSI for each category across all images
     average_csi = {category: np.nanmean(csi_values[category]) for category in categories_threshold.keys()}
@@ -412,20 +411,3 @@ with open(output_file_path, 'w') as file:
         print(f"{category}: {avg_fss}")
         file.write(f"\nAverage FSS for category: {category}: {avg_fss}\n")
     file.close()
-
-# # Create Heatmaps
-# for i, spatial_error in enumerate(spatial_errors):
-#     plt.figure()
-#     sns.heatmap(spatial_error[0,0].detach().cpu().numpy(), cmap='viridis')
-#     plt.title(f'Spatial Error Heatmap (Image {i + 1})')
-#     plt.savefig(f"output/Errors/Spatial Error Heatmap (Image {i + 1})")
-#     plt.close()
-
-# # Create Contour Plots
-# for i, spatial_error in enumerate(spatial_errors):
-#     plt.figure()
-#     contour = plt.contour(spatial_error[0,0].detach().cpu().numpy(), cmap='viridis')
-#     plt.title(f'Spatial Error Contour Plot (Image {i + 1})')
-#     plt.colorbar(contour)
-#     plt.savefig(f"output/Errors/Spatial Error Contour (Image {i + 1})")
-#     plt.close()

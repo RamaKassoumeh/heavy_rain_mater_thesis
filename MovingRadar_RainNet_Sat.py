@@ -116,8 +116,8 @@ inverseTransform= transforms.Compose([
 ])
 
 train_dataset = RadarFilterRainNetSatelliteDataset(
-    img_dir='../RadarData_18/',
-    sat_dir='../SatelliteData',
+    img_dir='/raid/heavyrain_dataset/RadarData_18/',
+    sat_dir='/raid/heavyrain_dataset/SatelliteData',
     transform=transform,
     inverse_transform=inverseTransform,
     sat_transform=sat_transform,
@@ -125,8 +125,8 @@ train_dataset = RadarFilterRainNetSatelliteDataset(
 )
 
 validate_data = RadarFilterRainNetSatelliteDataset(
-    img_dir='../RadarData_validate_18/',
-    sat_dir='../SatelliteData',
+    img_dir='/raid/heavyrain_dataset/RadarData_validate_18/',
+    sat_dir='/raid/heavyrain_dataset/SatelliteData',
     transform=transform,
     inverse_transform=inverseTransform,
     sat_transform=sat_transform,
@@ -134,8 +134,8 @@ validate_data = RadarFilterRainNetSatelliteDataset(
 )
 
 test_data = RadarFilterRainNetSatelliteDataset(
-    img_dir='../RadarData_test_18/',
-    sat_dir='../SatelliteData',
+    img_dir='/raid/heavyrain_dataset/RadarData_test_18/',
+    sat_dir='/raid/heavyrain_dataset/SatelliteData',
     transform=transform,
     inverse_transform=inverseTransform,
     sat_transform=sat_transform,
@@ -147,20 +147,20 @@ timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
 train_dataloader = DataLoader(
     dataset=train_dataset,
-    batch_size=1,
+    batch_size=10,
     shuffle=True
 )
 
 validate_loader = DataLoader(
     dataset=validate_data,
-    batch_size=1,
+    batch_size=5,
     shuffle=True
 )
 
 test_loader = DataLoader(
     dataset=test_data,
-    batch_size=1,
-    shuffle=False
+    batch_size=5,
+    shuffle=True
 )
 
 class LogCoshLoss(nn.Module):
@@ -205,7 +205,7 @@ class LogCoshThresholdLoss(nn.Module):
 model=RainNet()
 no_param=sum(p.numel() for p in model.parameters() if p.requires_grad)
 print(f"number of parameters in the model is {no_param}")
-_model=torch.nn.DataParallel(model)
+model=torch.nn.DataParallel(model)
 model.cuda()
 # optim = Adam(model.parameters(), lr=1e-4)
 optim = Adam(model.parameters(), lr=3e-4)
@@ -222,12 +222,12 @@ scheduler = torch.optim.lr_scheduler.MultiStepLR(optim, milestones=[10,6,4], gam
 # criterion_moderate_rain = LogCoshThresholdLoss(transform(np.array([[2.5]])),transform(np.array([[7.5]])))
 # # 73.5-200
 # criterion_heavy_rain = LogCoshThresholdLoss(transform(np.array([[7.5]])),transform(np.array([[201]])))
-num_epochs = 50
+num_epochs = 30
 criterion = LogCoshLoss()
-folder_name='radar_trainer_30M_RainNet_Sat_288_size_log_200_normalize_3d_sat_8bands_epcoh'
+file_name='radar_trainer_30M_RainNet_Sat_288_size_log_200_normalize_3d_sat_bigger'
 # Initializing in a separate cell, so we can easily add more epochs to the same run
 
-writer = SummaryWriter(f'runs/{folder_name}_{timestamp}')
+writer = SummaryWriter(f'runs/{file_name}_{timestamp}')
 
 for epoch in range(1, num_epochs + 1):
 
@@ -260,8 +260,8 @@ for epoch in range(1, num_epochs + 1):
             target=inverseTransform(target)
             input=inverseTransform(input)
             output=inverseTransform(output)
-            # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',folder_name)
-            plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,target[0,0],output[0,0]], 2, 4,epoch,batch_num,'train',folder_name)
+            # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',file_name)
+            plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,target[0,0],output[0,0]], 2, 4,epoch,batch_num,'train',file_name)
     # print('Accuracy of the network : %.2f %%' % (100 * acc / total))
 
     train_loss /= len(train_dataloader.dataset)
@@ -286,8 +286,8 @@ for epoch in range(1, num_epochs + 1):
                 target=inverseTransform(target)
                 input=inverseTransform(input)
                 output=inverseTransform(output)
-                # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3] ,input[0,0,input.shape[2]-4] ,input[0,0,input.shape[2]-5] ,input[0,0,input.shape[2]-6]  ,target[0][0] ,output[0][0] ], 2, 4,epoch,batch_num,'validate',folder_name)
-                plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,target[0,0],output[0,0]], 2, 4,epoch,batch_num,'validate',folder_name)
+                # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3] ,input[0,0,input.shape[2]-4] ,input[0,0,input.shape[2]-5] ,input[0,0,input.shape[2]-6]  ,target[0][0] ,output[0][0] ], 2, 4,epoch,batch_num,'validate',file_name)
+                plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,target[0,0],output[0,0]], 2, 4,epoch,batch_num,'validate',file_name)
 
     val_loss /= len(validate_loader.dataset)
     # val_loss /= 128
@@ -303,10 +303,10 @@ for epoch in range(1, num_epochs + 1):
     writer.flush()
 
 # Save the model's state dictionary
-torch.save(model.state_dict(), folder_name+'_model.pth')
+torch.save(model.state_dict(), f'models/{file_name}_model.pth')
 
 # Save the optimizer's state dictionary if needed
-torch.save(optim.state_dict(), folder_name+'_optimizer.pth')
+torch.save(optim.state_dict(), f'models/{file_name}_optimizer.pth')
 
 # To load the model later
 # model = CNNModel()
@@ -364,7 +364,7 @@ rmse_values = []
 
 # Calculate CSI for each category across all images
 csi_values = {category: [] for category in categories_threshold.keys()}
-output_file_path = folder_name+'_results.txt'  # Specify the file path where you want to save the results
+output_file_path = file_name+'_results.txt'  # Specify the file path where you want to save the results
 
 model.eval()
 with torch.no_grad():
@@ -374,8 +374,8 @@ with torch.no_grad():
         predicted_img=inverseTransform(output)
         if batch_num%100 ==0:
             input=inverseTransform(input)
-            # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',folder_name)
-            plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,actual_img[0,0],predicted_img[0,0]], 2, 4,1,batch_num,'test',folder_name)
+            # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',file_name)
+            plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,actual_img[0,0],predicted_img[0,0]], 2, 4,1,batch_num,'test',file_name)
         
          # Calculate the squared differences between actual and predicted values
         squared_differences = (actual_img - predicted_img) ** 2
@@ -410,7 +410,7 @@ average_rmse = np.mean(rmse_values)
 
 # Display the results
 print(f"Average RMSE across all images: {average_rmse}")
-with open(output_file_path, 'w') as file:
+with open(f'results/{output_file_path}', 'w') as file:
     file.write(f"\nAverage RMSE across all images: {average_rmse}\n")
 
     # Calculate the average CSI for each category across all images

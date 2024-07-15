@@ -1,0 +1,22 @@
+
+Average RMSE across all images: 40.89570236206055
+
+Average CSI for category: undefined: 0.9450060655074808
+
+Average CSI for category: light rain: 0.9602348861038859
+
+Average CSI for category: moderate rain: 0.4923210663575775
+
+Average CSI for category: heavy rain: 0.36690017513134854
+
+Average CSI for category: Violent rain: 1.0
+
+Average FSS for category: undefined: 0.8926355490849399
+
+Average FSS for category: light rain: 0.9840442617262228
+
+Average FSS for category: moderate rain: 0.8007100555496044
+
+Average FSS for category: heavy rain: 0.6734184997950541
+
+Average FSS for category: Violent rain: 1.0
