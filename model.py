@@ -120,8 +120,6 @@ def train_model(train_dataset,validate_data,test_data,inverseTransform,model,fil
     for epoch in range(start_epoch, num_epochs + 1):
 
         train_loss = 0
-        acc=0
-        total =0
         model.train() 
         for batch_num, (input, target) in enumerate(tqdm(train_dataloader), 1):
             optim.zero_grad()
@@ -196,6 +194,9 @@ def train_model(train_dataset,validate_data,test_data,inverseTransform,model,fil
         writer.add_scalars('Training vs. Validation Loss',
                         {'Training': train_loss, 'Validation': val_loss},
                         epoch)
+        # Log the learning rate
+        current_lr = optim.param_groups[0]['lr']
+        writer.add_scalar('Learning Rate', current_lr, epoch)
         writer.flush()
         # Save checkpoint every 5 epochs
         if epoch% 5 == 0:

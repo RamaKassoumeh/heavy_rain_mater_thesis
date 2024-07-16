@@ -251,6 +251,8 @@ for epoch in range(start_epoch, num_epochs + 1):
     total =0
     model.train() 
     for batch_num, (input, target) in enumerate(tqdm(train_dataloader), 1):
+        current_lr = optim.param_groups[0]['lr']
+        writer.add_scalar('Learning_Rate', current_lr, epoch)
         optim.zero_grad()
         output = model(input)
         output_flatten=output.flatten()
@@ -337,17 +339,9 @@ torch.save(model.state_dict(), f'models/{file_name}_model.pth')
 # Save the optimizer's state dictionary if needed
 torch.save(optim.state_dict(), f'models/{file_name}_optimizer.pth')
 
-# To load the model later
-# model = CNNModel()
-# model.load_state_dict(torch.load('cnn_model.pth'))
-
-# # If you saved the optimizer's state dictionary, you can load it back
-# optimizer.load_state_dict(torch.load('optimizer.pth'))
-
 # test phase
 
 # Define the rain categories and thresholds
-
 categories_threshold={'undefined':(-999, 0),'light rain':(0, 2.5), 'moderate rain':(2.5, 7.5), 'heavy rain':(7.5, 200)}# Function to categorize pixel values based on thresholds
 def categorize_pixel(value, thresholds, categories):
     for i, (lower, upper) in enumerate(thresholds):
