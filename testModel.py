@@ -27,6 +27,8 @@ import numpy as np
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
 
+from test_metrics import calculate_metrics
+
 decimal_places = 3
 
 # Multiply the tensor by 10^decimal_places
@@ -51,52 +53,6 @@ max_value=200
 mean=0.21695
 std=0.9829
 # # make transforms
-# def custom_transform1(x):
-#     # Use PyTorch's where function to apply the transformation element-wise
-#     return torch.where(x >= 0, x + 1, x)
-# def custom_transform2(x):
-#     # Use PyTorch's where function to apply the transformation element-wise
-#     return torch.where(x < 0, 0, x)
-
-
-# transform = transforms.Compose([
-#     transforms.ToTensor(),
-#     # transforms.Lambda(lambda x: x.unsqueeze(0))  ,# Add a new dimension at position 0
-#     # transforms.Lambda(lambda x: x.cuda()) , # send data to cuda
-#     # transforms.Normalize(mean=[mean,],
-#     #                          std=[std,],)
-#     # transforms.Lambda(lambda x: (x-min_value)/(max_value-min_value)),
-#     # transforms.Lambda(lambda x: torch.log2(x+1))
-#     transforms.Lambda(custom_transform1) ,
-#     transforms.Lambda(custom_transform2) ,
-#     # transforms.Lambda(lambda x: torch.log(x+1)),
-#      transforms.Lambda(lambda x:  (torch.log(x+1) / torch.log(torch.tensor(max_value))).float()),
-#     # transforms.Lambda(lambda x: x.float())
-#     transforms.Lambda(lambda x: torch.round(x*factor)/factor) 
-
-    
-# ])
-# def invert_custom_transform1(x):
-#     # Use PyTorch's where function to apply the transformation element-wise
-#     return torch.where(x > 0, x-1, x)
-# def invert_custom_transform2(x):
-#     # Use PyTorch's where function to apply the transformation element-wise
-#     return torch.where(x <= 0, -999, x) 
-
-# inverseTransform= transforms.Compose([
-#     # transforms.Lambda(lambda x: x.unsqueeze(0))  ,# Add a new dimension at position 0
-#     # transforms.Lambda(lambda x: x.cuda()) , # send data to cuda
-#     # transforms.Normalize(mean=[-mean/std,],
-#                             #  std=[1/std,])
-#     # transforms.Lambda(lambda x: torch.exp(x)-1),
-#     transforms.Lambda(lambda x: torch.pow(max_value, x)-1),
-#     transforms.Lambda(invert_custom_transform2) ,
-#     transforms.Lambda(invert_custom_transform1) ,
-#     # transforms.Lambda(invert_custom_transform2) ,
-#     # transforms.Lambda(lambda x: (x*(max_value - min_value))+min_value)
-#     transforms.Lambda(lambda x: torch.round(x*factor)/factor) 
-# ])
-
 def custom_transform1(x):
     # Use PyTorch's where function to apply the transformation element-wise
     return torch.where(x >= 0, x + 1, x)
@@ -347,7 +303,7 @@ with torch.no_grad():
         output = model(input)
         actual_img=inverseTransform(target)
         predicted_img=inverseTransform(output)
-        
+        mse,csi,fss=calculate_metrics(target,output)
         if batch_num%100 ==0:
             input=inverseTransform(input)
             # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',folder_name)
@@ -382,6 +338,7 @@ with torch.no_grad():
                         categories_threshold[category][1], neighborhood_size)
             fss_values[category].append(fss)
         #print(f"test batch number={batch_num}")
+        # add test metrics
         if batch_num%10 ==0:
             predicted_img=invert_custom_transform2(predicted_img)
             spatial_error = check_spetial_residual(actual_img,predicted_img)

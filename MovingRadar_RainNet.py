@@ -26,6 +26,7 @@ import io
 from torchvision import transforms
 import numpy as np
 from sklearn.metrics import confusion_matrix
+from test_metrics import calculate_metrics,categories_threshold
 
 # import imageio
 # from ipywidgets import widgets, HBox
@@ -181,7 +182,7 @@ no_param=sum(p.numel() for p in model.parameters() if p.requires_grad)
 print(f"number of parameters in the model is {no_param}")
 model.cuda()
 # optim = Adam(model.parameters(), lr=1e-4)
-optim = Adam(model.parameters(), lr=3e-4)
+optim = Adam(model.parameters(), lr=0.1)
 # Define learning rate scheduler
 # scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=5, gamma=0.1)
 scheduler = torch.optim.lr_scheduler.MultiStepLR(optim, milestones=[10,6,4], gamma=0.1)
@@ -197,10 +198,25 @@ scheduler = torch.optim.lr_scheduler.MultiStepLR(optim, milestones=[10,6,4], gam
 # criterion_heavy_rain = LogCoshThresholdLoss(transform(np.array([[7.5]])),transform(np.array([[201]])))
 num_epochs = 10
 criterion = LogCoshLoss()
-folder_name='radar_trainer_30M_RainNet_288_size_log_200_normalize_3d_2018'
+file_name='radar_trainer_30M_RainNet_288_size_log_200_normalize_3d_2018'
 # Initializing in a separate cell, so we can easily add more epochs to the same run
+# Calculate CSI for each category across all images
+csi_values = {category: [] for category in categories_threshold.keys()}
 
-writer = SummaryWriter(f'runs/{folder_name}_{timestamp}')
+# Calculate fss for each category across all images
+fss_values = {category: [] for category in categories_threshold.keys()}
+writer = SummaryWriter(f'runs/{file_name}_{timestamp}')
+start_epoch=1
+checkpoint_path =f'models/{file_name}_model_checlpoint.pth'
+# Load the checkpoint if it exists
+if os.path.exists(checkpoint_path):
+    checkpoint = torch.load(checkpoint_path)
+    model.load_state_dict(checkpoint['model_state_dict'])
+    optim.load_state_dict(checkpoint['optimizer_state_dict'])
+    start_epoch = checkpoint['epoch'] + 1
+    print(f"Resumed from checkpoint at epoch {start_epoch}")
+
+writer = SummaryWriter(f'runs/{file_name}_{timestamp}')
 
 for epoch in range(1, num_epochs + 1):
 
@@ -232,8 +248,8 @@ for epoch in range(1, num_epochs + 1):
             target=inverseTransform(target)
             input=inverseTransform(input)
             output=inverseTransform(output)
-            # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',folder_name)
-            plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,target[0,0],output[0,0]], 2, 4,epoch,batch_num,'train',folder_name)
+            # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',file_name)
+            plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,target[0,0],output[0,0]], 2, 4,epoch,batch_num,'train',file_name)
     # print('Accuracy of the network : %.2f %%' % (100 * acc / total))
 
     train_loss /= len(train_dataloader.dataset)
@@ -258,8 +274,8 @@ for epoch in range(1, num_epochs + 1):
                 target=inverseTransform(target)
                 input=inverseTransform(input)
                 output=inverseTransform(output)
-                # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3] ,input[0,0,input.shape[2]-4] ,input[0,0,input.shape[2]-5] ,input[0,0,input.shape[2]-6]  ,target[0][0] ,output[0][0] ], 2, 4,epoch,batch_num,'validate',folder_name)
-                plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,target[0,0],output[0,0]], 2, 4,epoch,batch_num,'validate',folder_name)
+                # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3] ,input[0,0,input.shape[2]-4] ,input[0,0,input.shape[2]-5] ,input[0,0,input.shape[2]-6]  ,target[0][0] ,output[0][0] ], 2, 4,epoch,batch_num,'validate',file_name)
+                plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,target[0,0],output[0,0]], 2, 4,epoch,batch_num,'validate',file_name)
 
     val_loss /= len(validate_loader.dataset)
     # val_loss /= 128
@@ -275,10 +291,10 @@ for epoch in range(1, num_epochs + 1):
     writer.flush()
 
 # Save the model's state dictionary
-torch.save(model.state_dict(), folder_name+'_model.pth')
+torch.save(model.state_dict(), file_name+'_model.pth')
 
 # Save the optimizer's state dictionary if needed
-torch.save(optim.state_dict(), folder_name+'_optimizer.pth')
+torch.save(optim.state_dict(), file_name+'_optimizer.pth')
 
 # To load the model later
 # model = CNNModel()
@@ -336,7 +352,7 @@ rmse_values = []
 
 # Calculate CSI for each category across all images
 csi_values = {category: [] for category in categories_threshold.keys()}
-output_file_path = folder_name+'_results.txt'  # Specify the file path where you want to save the results
+output_file_path = file_name+'_results.txt'  # Specify the file path where you want to save the results
 
 model.eval()
 with torch.no_grad():
@@ -346,8 +362,8 @@ with torch.no_grad():
         predicted_img=inverseTransform(output)
         if batch_num%100 ==0:
             input=inverseTransform(input)
-            # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',folder_name)
-            plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,actual_img[0,0],predicted_img[0,0]], 2, 4,1,batch_num,'test',folder_name)
+            # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',file_name)
+            plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,actual_img[0,0],predicted_img[0,0]], 2, 4,1,batch_num,'test',file_name)
         
          # Calculate the squared differences between actual and predicted values
         squared_differences = (actual_img - predicted_img) ** 2

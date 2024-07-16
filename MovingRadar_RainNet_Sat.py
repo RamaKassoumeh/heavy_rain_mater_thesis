@@ -1,4 +1,5 @@
 from datetime import datetime
+import random
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,7 +14,7 @@ from RainNet_Satellite import RainNet
 from plotting import plot_images,plot_image
 
 from convlstm import Seq2Seq
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 import h5py
 import os
 import glob
@@ -28,6 +29,7 @@ from sklearn.metrics import confusion_matrix
 
 from tqdm import tqdm
 
+from test_metrics import calculate_metrics,categories_threshold
 
 # read data from file
 with open("analyse_satellite_IQR.txt", 'r') as file:
@@ -156,7 +158,7 @@ validate_loader = DataLoader(
     batch_size=5,
     shuffle=True
 )
-
+test_sample_count=len(validate_loader)*validate_loader.batch_size*10/100,
 test_loader = DataLoader(
     dataset=test_data,
     batch_size=5,
@@ -195,7 +197,7 @@ class LogCoshThresholdLoss(nn.Module):
         diff = y_pred_filtered_values - y_true_filtered_values
         # Compute log(cosh(x)) element-wise
         loss = torch.log(torch.cosh(diff))
-        # Compute the mean loss over all examples
+        # Compute the mean loss over all examples``
         loss = torch.mean(loss)
         return loss
 
@@ -208,7 +210,7 @@ print(f"number of parameters in the model is {no_param}")
 model=torch.nn.DataParallel(model)
 model.cuda()
 # optim = Adam(model.parameters(), lr=1e-4)
-optim = Adam(model.parameters(), lr=3e-4)
+optim = Adam(model.parameters(), lr=0.1)
 # Define learning rate scheduler
 # scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=5, gamma=0.1)
 scheduler = torch.optim.lr_scheduler.MultiStepLR(optim, milestones=[10,6,4], gamma=0.1)
@@ -222,14 +224,27 @@ scheduler = torch.optim.lr_scheduler.MultiStepLR(optim, milestones=[10,6,4], gam
 # criterion_moderate_rain = LogCoshThresholdLoss(transform(np.array([[2.5]])),transform(np.array([[7.5]])))
 # # 73.5-200
 # criterion_heavy_rain = LogCoshThresholdLoss(transform(np.array([[7.5]])),transform(np.array([[201]])))
-num_epochs = 30
+num_epochs = 50
 criterion = LogCoshLoss()
 file_name='radar_trainer_30M_RainNet_Sat_288_size_log_200_normalize_3d_sat_bigger'
 # Initializing in a separate cell, so we can easily add more epochs to the same run
+# Calculate CSI for each category across all images
+csi_values = {category: [] for category in categories_threshold.keys()}
 
+# Calculate fss for each category across all images
+fss_values = {category: [] for category in categories_threshold.keys()}
 writer = SummaryWriter(f'runs/{file_name}_{timestamp}')
+start_epoch=1
+checkpoint_path =f'models/{file_name}_model_checlpoint.pth'
+# Load the checkpoint if it exists
+if os.path.exists(checkpoint_path):
+    checkpoint = torch.load(checkpoint_path)
+    model.load_state_dict(checkpoint['model_state_dict'])
+    optim.load_state_dict(checkpoint['optimizer_state_dict'])
+    start_epoch = checkpoint['epoch'] + 1
+    print(f"Resumed from checkpoint at epoch {start_epoch}")
 
-for epoch in range(1, num_epochs + 1):
+for epoch in range(start_epoch, num_epochs + 1):
 
     train_loss = 0
     acc=0
@@ -240,6 +255,7 @@ for epoch in range(1, num_epochs + 1):
         output = model(input)
         output_flatten=output.flatten()
         target_flatten=target.flatten()
+        
         # loss_undefined_rain = criterion_undefined_rain(output_flatten, target_flatten)
         # loss_light_rain = criterion_light_rain(output_flatten, target_flatten)
         # loss_moderate_rain = criterion_moderate_rain(output_flatten, target_flatten)
@@ -248,25 +264,15 @@ for epoch in range(1, num_epochs + 1):
         loss = criterion(output_flatten, target_flatten)
         loss.backward()
         optim.step()
-        # optim.zero_grad()
         train_loss += loss.item()
-        # acc += (output.flatten() -target.flatten()<=0.01).sum().item()
-        # total += target.size(0)
-        # print(f"the accurecy is {acc}")
-        # print(f"the train loss is {train_loss}")
-        # print(f"batch number={batch_num} in epoch {epoch}")
-        
         if batch_num%100 ==0:
             target=inverseTransform(target)
             input=inverseTransform(input)
             output=inverseTransform(output)
             # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',file_name)
             plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,target[0,0],output[0,0]], 2, 4,epoch,batch_num,'train',file_name)
-    # print('Accuracy of the network : %.2f %%' % (100 * acc / total))
 
     train_loss /= len(train_dataloader.dataset)
-    # acc /= len(train_dataloader.dataset)
-    # train_loss /= 128
     print(f"the train loss is {train_loss}")
     val_loss = 0
     model.eval()
@@ -288,6 +294,22 @@ for epoch in range(1, num_epochs + 1):
                 output=inverseTransform(output)
                 # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3] ,input[0,0,input.shape[2]-4] ,input[0,0,input.shape[2]-5] ,input[0,0,input.shape[2]-6]  ,target[0][0] ,output[0][0] ], 2, 4,epoch,batch_num,'validate',file_name)
                 plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,target[0,0],output[0,0]], 2, 4,epoch,batch_num,'validate',file_name)
+            if epoch%5==0 and batch_num%10 ==0:
+                mse,csi,fss=calculate_metrics(target,output)
+                for category in categories_threshold.keys():
+                    csi_values[category].append(csi[category])
+                    fss_values[category].append(fss[category])
+    if epoch%5==0:
+        mse,csi,fss=calculate_metrics(target,output)
+        for category in categories_threshold.keys():
+                csi_values[category].append(csi[category])
+                fss_values[category].append(fss[category])
+        csi_means = {category: np.nanmean(csi_values[category]) for category in categories_threshold.keys()}
+        fss_means = {category: np.nanmean(fss_values[category]) for category in categories_threshold.keys()}
+        writer.add_scalars(f'CSI values',csi_means,epoch)
+        writer.add_scalars(f'FSS values',fss_means,epoch)
+
+
 
     val_loss /= len(validate_loader.dataset)
     # val_loss /= 128
@@ -295,12 +317,19 @@ for epoch in range(1, num_epochs + 1):
     print("Epoch:{} Training Loss:{:.2f} Validation Loss:{:.2f}\n".format(
         epoch, train_loss, val_loss))
 
-    # Log the running loss averaged per batch
-    # for both training and validation
+    # Log the running loss averaged per batch for both training and validation
     writer.add_scalars('Training vs. Validation Loss',
                        {'Training': train_loss, 'Validation': val_loss},
                        epoch)
     writer.flush()
+    # Save checkpoint every 5 epochs
+    if epoch% 5 == 0:
+        torch.save({
+                'epoch': epoch,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optim.state_dict(),
+            }, checkpoint_path)
+        print(f'Checkpoint saved at epoch {epoch + 1}')
 
 # Save the model's state dictionary
 torch.save(model.state_dict(), f'models/{file_name}_model.pth')

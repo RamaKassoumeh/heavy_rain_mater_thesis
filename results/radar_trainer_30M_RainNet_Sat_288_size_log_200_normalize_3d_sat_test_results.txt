@@ -3,20 +3,20 @@ Average RMSE across all images: 14.662789344787598
 
 Average CSI for category: undefined: 0.9909699627728203
 
-Average CSI for category: light rain: 0.9851836121237891
+Average CSI for category: light rain: 0.9904103247961525
 
-Average CSI for category: moderate rain: 0.362619954744144
+Average CSI for category: moderate rain: 0.3595592238909852
 
-Average CSI for category: heavy rain: 0.3456116804991067
+Average CSI for category: heavy rain: 0.481691816738421
 
-Average CSI for category: Violent rain: 0.5244104823759407
+Average CSI for category: Violent rain: 0.9013835218762579
 
 Average FSS for category: undefined: 0.7969055320614254
 
-Average FSS for category: light rain: 0.9833965918615958
+Average FSS for category: light rain: 0.9843820429777252
 
-Average FSS for category: moderate rain: 0.5922571515913237
+Average FSS for category: moderate rain: 0.5856138756995025
 
-Average FSS for category: heavy rain: 0.5099523163064955
+Average FSS for category: heavy rain: 0.5771354035224796
 
-Average FSS for category: Violent rain: 0.6180466723383968
+Average FSS for category: Violent rain: 0.9041028294095105
