@@ -1,8 +1,82 @@
-
-# Function to calculate CSI for a single category
+import ast
+import cv2
 import numpy as np
-from sklearn.metrics import confusion_matrix, mean_squared_error
+from sklearn.metrics import confusion_matrix, mean_squared_error,mean_absolute_error
+import torch
+from plotting import plot_images
+from torch.utils.data import DataLoader
 
+from datetime import datetime
+from torchvision import transforms
+from tqdm import tqdm
+
+min_value=0
+max_value=200
+
+# read data from file
+with open("analyse_satellite_IQR.txt", 'r') as file:
+    lines = file.readlines()
+
+data = {}
+for line in lines:
+    key, value = line.split(':', 1)
+    key = key.strip()
+    value = value.strip()
+    value = value.replace('array', '')  # Remove 'array' to make it a valid dictionary
+    data[key] = ast.literal_eval(value)
+
+# Extracting the dictionaries
+iqr_values = data.get("IQR values", {})
+bands_min_values = data.get("Min values", {})
+bands_max_values = data.get("Max values", {})
+outliers_count_percentage_values = data.get("outliers count percentage values", {})
+
+
+def custom_transform1(x):
+    # Use PyTorch's where function to apply the transformation element-wise
+    return torch.where(x >= 0, x + 1, x)
+def custom_transform2(x):
+    # Use PyTorch's where function to apply the transformation element-wise
+    return torch.where(x < 0, 0, x)
+
+
+radar_transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Lambda(custom_transform1) ,
+    transforms.Lambda(custom_transform2) ,
+     transforms.Lambda(lambda x:  (torch.log(x+1) / torch.log(torch.tensor(max_value+2))).float()),    
+])
+
+# def invert_custom_transform1(x):
+#     # Use PyTorch's where function to apply the transformation element-wise
+#     return torch.where(x >= 0, x-1, x)
+# def invert_custom_transform2(x):
+#     # Use PyTorch's where function to apply the transformation element-wise
+#     return torch.where(x < 0, -999, x) 
+def invert_custom_transform1(x):
+    # Use PyTorch's where function to apply the transformation element-wise
+    return torch.where(x >= 0, x-1, x)
+def invert_custom_transform2(x):
+    # Use PyTorch's where function to apply the transformation element-wise
+    return torch.where(x < 0, -999, x) 
+radar_inverseTransform= transforms.Compose([
+    transforms.Lambda(lambda x: torch.pow(max_value+2, x)-1),
+    # transforms.Lambda(invert_custom_transform2) ,
+    transforms.Lambda(invert_custom_transform1) ,
+    transforms.Lambda(invert_custom_transform2) ,
+    transforms.Lambda(lambda x: x) 
+])
+
+def normalize_Satellite(x):
+    for i in range(x.size(0)):
+        key=list(bands_min_values.keys())[i]
+        x[i] = (x[i]-bands_min_values[key])/(bands_max_values[key]-bands_min_values[key])
+    return x
+
+satellite_transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Lambda(normalize_Satellite),
+    ])
 categories_threshold={'undefined':(-999, 0),'light rain':(0, 2.5), 'moderate rain':(2.5, 7.5), 'heavy rain':(7.5, 50),'Violent rain':(50, 201)}# Function to categorize pixel values based on thresholds
 
 def calculate_cat_csi(predicted, actual, category):
@@ -18,13 +92,13 @@ def calculate_cat_csi(predicted, actual, category):
         # Calculate CSI using the formula
         if tp + fp + fn == 0:
             # Handle the case where TP + FP + FN is zero
-            csi = 1   
+            csi = np.nan   
         else:
             # Calculate CSI
             csi = tp / (tp + fp + fn)
     else:
         # In case the confusion matrix is not 2x2, handle appropriately
-        csi = 0 
+        csi  = 0 
     # Calculate CSI
     return csi
 
@@ -79,6 +153,34 @@ def calculate_fractional_coverage(grid, lower_threshold, upper_threshold, neighb
 
     return fractional_coverage
 
+def calculate_fractional_coverage_fast(grid, lower_threshold, upper_threshold, neighborhood_size):
+    """
+    Calculate the fractional coverage of grid points exceeding the given threshold
+    within a specified neighborhood size.
+
+    Parameters:
+    grid (np.ndarray): 2D array of precipitation values.
+    lower_threshold (float): Precipitation lower threshold.
+    upper_threshold (float): Precipitation upper threshold.
+    neighborhood_size (int): Size of the neighborhood to consider.
+
+    Returns:
+    np.ndarray: Fractional coverage for each grid point.
+    """
+    grid = grid.squeeze(1,2)
+    grid = grid.cpu().numpy()
+    fractional_coverage = np.zeros_like(grid, dtype=float)
+    for b in range(grid.shape[0]):
+            BP = np.where((grid[b] >= lower_threshold) & (grid[b] < upper_threshold), 1, 0)
+            # convert to float
+            BP = BP.astype(float)
+            # make kernel of size neighborhood_size
+            kernel = np.ones((neighborhood_size, neighborhood_size))
+            # apply the kernel to the BP using opencv
+            fractional_coverage[b] = cv2.filter2D(BP, -1, kernel, borderType=cv2.BORDER_CONSTANT)
+            # divide by the total number of points in the neighborhood
+            fractional_coverage[b] = fractional_coverage[b] / neighborhood_size ** 2
+    return fractional_coverage
 
 def calculate_fss(observed, forecasted, lower_threshold, upper_threshold, neighborhood_size):
     """
@@ -96,9 +198,9 @@ def calculate_fss(observed, forecasted, lower_threshold, upper_threshold, neighb
     float: Fractional Skill Score (FSS).
     """
     # Calculate fractional coverage for observed and forecasted grids
-    observed_fractional_coverage = calculate_fractional_coverage(observed, lower_threshold, upper_threshold,
+    observed_fractional_coverage = calculate_fractional_coverage_fast(observed, lower_threshold, upper_threshold,
                                                                  neighborhood_size)
-    forecasted_fractional_coverage = calculate_fractional_coverage(forecasted, lower_threshold, upper_threshold,
+    forecasted_fractional_coverage = calculate_fractional_coverage_fast(forecasted, lower_threshold, upper_threshold,
                                                                    neighborhood_size)
 
     # Calculate Mean Squared Error (MSE) between fractional coverages
@@ -117,9 +219,9 @@ def calculate_fss(observed, forecasted, lower_threshold, upper_threshold, neighb
     numerator = np.sum((forecasted_fractional_coverage - observed_fractional_coverage) ** 2)
     denominator = np.sum(forecasted_fractional_coverage ** 2 + observed_fractional_coverage ** 2)
     if numerator==denominator ==0:
-        return 1 
+        return np.nan
     elif denominator==0:
-        return 1
+        return np.nan
     # Calculate FSS
     fss = 1 - (numerator / denominator)
 
@@ -141,9 +243,10 @@ def filter_negative_values(y_true, y_pred):
 
 def calculate_filtered_mse(y_true, y_pred):
     y_true_filtered, y_pred_filtered = filter_negative_values(y_true, y_pred)
-    mse = mean_squared_error(y_true_filtered, y_pred_filtered)
+    # mse = mean_squared_error(y_true_filtered, y_pred_filtered)
+    mae= mean_absolute_error(y_true_filtered, y_pred_filtered)
     return mse
-
+rmse_values = []
 # Calculate CSI for each category across all images
 csi_values = {category: [] for category in categories_threshold.keys()}
 
@@ -160,3 +263,66 @@ def calculate_metrics(actual_img,predicted_img):
         fss_values[category]=calculate_fss(actual_img, predicted_img, categories_threshold[category][0],
                         categories_threshold[category][1], neighborhood_size)
     return mse,csi_values,fss_values
+
+# Initilaize RMSE for each image
+
+csi_values_array = {category: [] for category in categories_threshold.keys()}
+
+# Calculate fss for each category across all images
+fss_values_array = {category: [] for category in categories_threshold.keys()}
+
+
+def test_phase(file_name,model,test_data,test_file_name,batch_size):
+    test_loader = DataLoader(
+            dataset=test_data,
+            batch_size=batch_size,
+            shuffle=False
+    )
+    model=torch.nn.DataParallel(model)
+    model.cuda()
+    model.load_state_dict(torch.load(f"models/{file_name}_model.pth"), strict=False)
+    # Use GPU if available
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+
+    output_file_path = f'results/{file_name}_test_results_{timestamp}.txt'  # Specify the file path where you want to save the resultsspatial_errors = []
+    model.eval()
+    with torch.no_grad():
+        for batch_num, (input, target) in enumerate(tqdm(test_loader), 1):
+            output = model(input)
+            actual_img=radar_inverseTransform(target)
+            predicted_img=radar_inverseTransform(output)
+            if batch_num%10 ==0:
+                input=radar_inverseTransform(input)
+                # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',folder_name)
+                plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,actual_img[0,0],predicted_img[0,0]], 2, 4,1,batch_num,'test',file_name)
+            mse,csi,fss=calculate_metrics(actual_img,predicted_img)
+            rmse = np.sqrt(mse)
+            for category in categories_threshold.keys():
+                csi_values_array[category].append(csi[category])
+                fss_values_array[category].append(fss[category])
+            # # Append RMSE to list
+            rmse_values.append(rmse)
+
+    # Calculate the average RMSE across all images
+    average_rmse = np.mean(rmse_values)
+
+    # Display the results
+    print(f"Average RMSE across all images: {average_rmse}")
+    with open(output_file_path, 'w') as file:
+        file.write(f"test on file {test_file_name}\n")
+        file.write(f"\nAverage RMSE across all images: {average_rmse}\n")
+        average_csi = {category: np.nanmean(csi_values_array[category]) for category in categories_threshold.keys()}
+        average_fss = {category: np.nanmean(fss_values_array[category]) for category in categories_threshold.keys()}
+
+        # Display the results
+        print("Average CSI for each category across all images:")
+        for category, avg_csi in average_csi.items():
+            print(f"{category}: {avg_csi}")
+            file.write(f"\nAverage CSI for category: {category}: {avg_csi}\n")
+        # Display the results
+        print("Average FSS for each category across all images:")
+        for category, avg_fss in average_fss.items():
+            print(f"{category}: {avg_fss}")
+            file.write(f"\nAverage FSS for category: {category}: {avg_fss}\n")
+        file.close()

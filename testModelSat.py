@@ -1,5 +1,6 @@
 from datetime import datetime
 
+import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -200,7 +201,7 @@ def calculate_cat_csi(predicted, actual, category):
         # Calculate CSI using the formula
         if tp + fp + fn == 0:
             # Handle the case where TP + FP + FN is zero
-            csi = 1   
+            csi = np.nan 
         else:
             # Calculate CSI
             csi = tp / (tp + fp + fn)
@@ -269,6 +270,34 @@ def calculate_fractional_coverage(grid, lower_threshold, upper_threshold, neighb
 
     return fractional_coverage
 
+def calculate_fractional_coverage_fast(grid, lower_threshold, upper_threshold, neighborhood_size):
+    """
+    Calculate the fractional coverage of grid points exceeding the given threshold
+    within a specified neighborhood size.
+
+    Parameters:
+    grid (np.ndarray): 2D array of precipitation values.
+    lower_threshold (float): Precipitation lower threshold.
+    upper_threshold (float): Precipitation upper threshold.
+    neighborhood_size (int): Size of the neighborhood to consider.
+
+    Returns:
+    np.ndarray: Fractional coverage for each grid point.
+    """
+    grid = grid.squeeze(1,2)
+    grid = grid.cpu().numpy()
+    fractional_coverage = np.zeros_like(grid, dtype=float)
+    for b in range(grid.shape[0]):
+            BP = np.where((grid[b] >= lower_threshold) & (grid[b] < upper_threshold), 1, 0)
+            # convert to float
+            BP = BP.astype(float)
+            # make kernel of size neighborhood_size
+            kernel = np.ones((neighborhood_size, neighborhood_size))
+            # apply the kernel to the BP using opencv
+            fractional_coverage[b] = cv2.filter2D(BP, -1, kernel, borderType=cv2.BORDER_CONSTANT)
+            # divide by the total number of points in the neighborhood
+            fractional_coverage[b] = fractional_coverage[b] / neighborhood_size ** 2
+    return fractional_coverage
 
 def calculate_fss(observed, forecasted, lower_threshold, upper_threshold, neighborhood_size):
     """
@@ -286,11 +315,14 @@ def calculate_fss(observed, forecasted, lower_threshold, upper_threshold, neighb
     float: Fractional Skill Score (FSS).
     """
     # Calculate fractional coverage for observed and forecasted grids
-    observed_fractional_coverage = calculate_fractional_coverage(observed, lower_threshold, upper_threshold,
+    observed_fractional_coverage = calculate_fractional_coverage_fast(observed, lower_threshold, upper_threshold,
                                                                  neighborhood_size)
-    forecasted_fractional_coverage = calculate_fractional_coverage(forecasted, lower_threshold, upper_threshold,
+    # observed_fractional_coverage = calculate_fractional_coverage(observed, lower_threshold, upper_threshold,
+    #                                                              neighborhood_size)
+    # forecasted_fractional_coverage = calculate_fractional_coverage(forecasted, lower_threshold, upper_threshold,
+    #                                                                neighborhood_size)
+    forecasted_fractional_coverage = calculate_fractional_coverage_fast(forecasted, lower_threshold, upper_threshold,
                                                                    neighborhood_size)
-
     # Calculate Mean Squared Error (MSE) between fractional coverages
     # mse = np.mean((observed_fractional_coverage - forecasted_fractional_coverage) ** 2)
 
@@ -307,9 +339,9 @@ def calculate_fss(observed, forecasted, lower_threshold, upper_threshold, neighb
     numerator = np.sum((forecasted_fractional_coverage - observed_fractional_coverage) ** 2)
     denominator = np.sum(forecasted_fractional_coverage ** 2 + observed_fractional_coverage ** 2)
     if numerator==denominator ==0:
-        return 1 
+        return np.nan 
     elif denominator==0:
-        return 1
+        return np.nan
     # Calculate FSS
     fss = 1 - (numerator / denominator)
 
@@ -324,7 +356,9 @@ csi_values = {category: [] for category in categories_threshold.keys()}
 
 # Calculate fss for each category across all images
 fss_values = {category: [] for category in categories_threshold.keys()}
-output_file_path = f'results/{file_name}_test_results.txt'  # Specify the file path where you want to save the results
+timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+
+output_file_path = f'results/{file_name}_test_results_{timestamp}.txt'  # Specify the file path where you want to save the results
 
 spatial_errors = []
 neighborhood_size=3
@@ -387,7 +421,7 @@ with open(output_file_path, 'w') as file:
     # Calculate the average CSI for each category across all images
     average_csi = {category: np.nanmean(csi_values[category]) for category in categories_threshold.keys()}
     # Calculate the average FSS for each category across all images
-    average_fss = {category: np.mean(fss_values[category]) for category in categories_threshold.keys()}
+    average_fss = {category: np.nanmean(fss_values[category]) for category in categories_threshold.keys()}
 
     # Display the results
     print("Average CSI for each category across all images:")

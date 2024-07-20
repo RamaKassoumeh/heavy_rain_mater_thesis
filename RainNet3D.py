@@ -49,16 +49,26 @@ class RainNet(nn.Module):
                 nn.Sigmoid())
         else:
             raise NotImplementedError()
+        
+        self._initialize_weights()
             
     def make_conv_block(self, in_ch, out_ch, kernel_size):
         
         return nn.Sequential(
             nn.Conv3d(in_ch, out_ch, kernel_size, padding='same'),
+            nn.BatchNorm3d(out_ch),
             nn.ReLU(),
             nn.Conv3d(out_ch, out_ch, kernel_size, padding='same'),
+            nn.BatchNorm3d(out_ch),
             nn.ReLU()
             )
-    
+
+    def _initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv3d):
+                nn.init.xavier_normal_(m.weight)
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)    
         
     def forward(self, x):
         x1s = self.conv["1"](x.float()) # conv1s

@@ -100,19 +100,22 @@ def check_conditions(event_persentage,event_max_precipitation,current_event_no,r
         if event_persentage>=threshold_persentage or event_max_precipitation>=max_threshold_persentage:
             accepted_events.append(current_event_no)
             satellite_events.append(sat_index)
+            print(f"radar {radar_file} & Satellie {satellite_list[sat_index]}")
             return True
         
         elif event_persentage<threshold_persentage and zero_counter/total_files*100<=zero_persentage:
             accepted_events.append(current_event_no)
             satellite_events.append(sat_index)
             zero_counter=zero_counter+1
+            print(f"radar {radar_file} & Satellie {satellite_list[sat_index]}")
+            return True
     return False
 
-train_data = '../RadarData_18/'
-validate_data = '../RadarData_validate_18/'
-test_data = '../RadarData_test_18/'
+train_data = '/raid/heavyrain_dataset/RadarData_18/'
+validate_data = '/raid/heavyrain_dataset/RadarData_validate_18/'
+test_data = '/raid/heavyrain_dataset/RadarData_summer_20/'
 
-satellite_data='../SatelliteData/'
+satellite_data='/raid/heavyrain_dataset/SatelliteData_summer_20/'
 min_value=0
 max_value=0
 
@@ -225,11 +228,11 @@ def process_data(radar_data_folder_path):
 #     max_precipitation=np.max(ds_arr)
 #     check_conditions(percentage,max_precipitation,1,"../RadarData/230825/hd2308250320.scu",300)
 
-process_data(train_data)
-total_sum=0
-total_sum_square=0
-count=0
-process_data(validate_data)
+# process_data(train_data)
+# total_sum=0
+# total_sum_square=0
+# count=0
+# process_data(validate_data)
 total_sum=0
 total_sum_square=0
 count=0

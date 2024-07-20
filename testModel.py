@@ -1,5 +1,6 @@
 from datetime import datetime
 
+import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -39,8 +40,10 @@ folder_name='radar_trainer_30M_RainNet_288_size_log_200_normalize_3d_2018'
 model=RainNet()
 model=torch.nn.DataParallel(model)
 model.cuda()
-model.load_state_dict(torch.load(folder_name+'_model.pth'), strict=False)
-# from ipywidgets import widgets, HBox
+# model.load_state_dict(torch.load(folder_name+'_model.pth'), strict=False)
+model.load_state_dict(torch.load(f"models/{folder_name}_model.pth"), strict=False)
+
+
 radar_data_folder_path = '../RadarData_test_18/'
 # Use GPU if available
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -239,6 +242,34 @@ def calculate_fractional_coverage(grid, lower_threshold, upper_threshold, neighb
 
     return fractional_coverage
 
+def calculate_fractional_coverage_fast(grid, lower_threshold, upper_threshold, neighborhood_size):
+    """
+    Calculate the fractional coverage of grid points exceeding the given threshold
+    within a specified neighborhood size.
+
+    Parameters:
+    grid (np.ndarray): 2D array of precipitation values.
+    lower_threshold (float): Precipitation lower threshold.
+    upper_threshold (float): Precipitation upper threshold.
+    neighborhood_size (int): Size of the neighborhood to consider.
+
+    Returns:
+    np.ndarray: Fractional coverage for each grid point.
+    """
+    grid = grid.squeeze(1,2)
+    grid = grid.cpu().numpy()
+    fractional_coverage = np.zeros_like(grid, dtype=float)
+    for b in range(grid.shape[0]):
+            BP = np.where((grid[b] >= lower_threshold) & (grid[b] < upper_threshold), 1, 0)
+            # convert to float
+            BP = BP.astype(float)
+            # make kernel of size neighborhood_size
+            kernel = np.ones((neighborhood_size, neighborhood_size))
+            # apply the kernel to the BP using opencv
+            fractional_coverage[b] = cv2.filter2D(BP, -1, kernel, borderType=cv2.BORDER_CONSTANT)
+            # divide by the total number of points in the neighborhood
+            fractional_coverage[b] = fractional_coverage[b] / neighborhood_size ** 2
+    return fractional_coverage
 
 def calculate_fss(observed, forecasted, lower_threshold, upper_threshold, neighborhood_size):
     """
@@ -256,9 +287,9 @@ def calculate_fss(observed, forecasted, lower_threshold, upper_threshold, neighb
     float: Fractional Skill Score (FSS).
     """
     # Calculate fractional coverage for observed and forecasted grids
-    observed_fractional_coverage = calculate_fractional_coverage(observed, lower_threshold, upper_threshold,
+    observed_fractional_coverage = calculate_fractional_coverage_fast(observed, lower_threshold, upper_threshold,
                                                                  neighborhood_size)
-    forecasted_fractional_coverage = calculate_fractional_coverage(forecasted, lower_threshold, upper_threshold,
+    forecasted_fractional_coverage = calculate_fractional_coverage_fast(forecasted, lower_threshold, upper_threshold,
                                                                    neighborhood_size)
 
     # Calculate Mean Squared Error (MSE) between fractional coverages
@@ -303,7 +334,6 @@ with torch.no_grad():
         output = model(input)
         actual_img=inverseTransform(target)
         predicted_img=inverseTransform(output)
-        mse,csi,fss=calculate_metrics(target,output)
         if batch_num%100 ==0:
             input=inverseTransform(input)
             # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',folder_name)
@@ -314,12 +344,15 @@ with torch.no_grad():
     
         # Calculate the mean of the squared differences
         # mean_squared_error = np.mean(squared_differences.detach().cpu().numpy())
-        
+        # mse,csi,fss=calculate_metrics(target,output)
+        # for category in categories_threshold.keys():
+        #     csi_values[category].append(csi[category])
+        #     fss_values[category].append(fss[category])
         # Calculate RMSE
         mse = calculate_filtered_mse(actual_img.detach().cpu().numpy(), predicted_img.detach().cpu().numpy())
         rmse = np.sqrt(mse)
         
-        # Append RMSE to list
+        # # Append RMSE to list
         rmse_values.append(rmse)
         # Flatten the images to 1D arrays for comparison
         actual_flat = actual_img.flatten()

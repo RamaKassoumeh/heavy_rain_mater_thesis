@@ -34,6 +34,7 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
         self.target_width=288
         self.target_height=288
         self.random_satellite=random_satellite
+        
         # Walk through all directories and files
         for radar_folders in sorted(os.listdir(self.img_dir)):
             # Construct the full path to the folder
@@ -47,14 +48,14 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
                 self.img_names.extend(radar_files)
         self.satellite_names = []
         for satellite_file in sorted(os.listdir(self.sat_dir)):
-            self.satellite_names.append(os.path.join(self.sat_dir, satellite_file))
+            if satellite_file.endswith('.tif'):
+                self.satellite_names.append(os.path.join(self.sat_dir, satellite_file))
         self.radar_data_array=np.load(img_dir+'/radar_data_array.npy')
         self.satellite_data_array=np.load(img_dir+'/satellite_data_array.npy')
 
         # read data from file of low and high values for each band
         with open("analyse_satellite_IQR.txt", 'r') as file:
             lines = file.readlines()
-
         data = {}
         for line in lines:
             key, value = line.split(':', 1)
@@ -68,13 +69,13 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
         self.bands_max_values = data.get("Max values", {})
 
     def __len__(self):
-
         return self.radar_data_array.__len__()
+    
 
     def read_radar_image(self,indx,return_original=False):
         try:
             img_path =  self.img_names[indx]
-            
+            print(img_path)
             file = h5py.File(img_path, 'r')
             a_group_key = list(file.keys())[0]
             dataset_DXk = file.get(a_group_key)
@@ -117,6 +118,7 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
 
     def read_updample_satellite_image(self,indx):
         satellite_file_name =  self.satellite_names[indx]
+        print(satellite_file_name)
         # satellite_dataset = gdal.Open(satellite_file_name)
         # # Perform the upsampling
         # output_satellite_dataset = gdal.Warp('', satellite_dataset, options=self.warp_options)

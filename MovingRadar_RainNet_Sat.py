@@ -251,8 +251,6 @@ for epoch in range(start_epoch, num_epochs + 1):
     total =0
     model.train() 
     for batch_num, (input, target) in enumerate(tqdm(train_dataloader), 1):
-        current_lr = optim.param_groups[0]['lr']
-        writer.add_scalar('Learning_Rate', current_lr, epoch)
         optim.zero_grad()
         output = model(input)
         output_flatten=output.flatten()
