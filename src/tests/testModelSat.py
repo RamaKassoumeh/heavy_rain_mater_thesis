@@ -11,7 +11,7 @@ from tqdm import tqdm
 from RadarFilterRainNetSatelliteDataset import RadarFilterRainNetSatelliteDataset
 
 from RainNet_Satellite_4_layers import RainNet
-from plotting import plot_images
+from plotting.plotting import plot_images
 
 from convlstm import Seq2Seq
 from torch.utils.data import DataLoader

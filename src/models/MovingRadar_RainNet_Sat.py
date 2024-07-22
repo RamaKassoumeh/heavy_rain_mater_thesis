@@ -11,7 +11,7 @@ from RadarFilterImageDataset import RadarFilterImageDataset
 from RadarFilterRainNetSatelliteDataset import RadarFilterRainNetSatelliteDataset
 
 from RainNet_Satellite import RainNet
-from plotting import plot_images,plot_image
+from plotting.plotting import plot_images,plot_image
 
 from convlstm import Seq2Seq
 from torch.utils.data import DataLoader, Subset

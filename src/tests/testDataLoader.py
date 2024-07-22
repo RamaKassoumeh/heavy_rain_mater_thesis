@@ -20,7 +20,7 @@ import io
 from torchvision import transforms
 from matplotlib.colors import LinearSegmentedColormap
 
-from plotting import plot_images
+from plotting.plotting import plot_images
 
 # make transforms
 transform = transforms.Compose([

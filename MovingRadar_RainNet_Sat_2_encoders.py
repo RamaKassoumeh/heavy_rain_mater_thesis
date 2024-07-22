@@ -10,7 +10,7 @@ from RadarFilterImageDataset import RadarFilterImageDataset
 from RadarFilterRainNetSatelliteDataset import RadarFilterRainNetSatelliteDataset
 
 from RainNet_Sat_2_encoder import RainNet
-from plotting import plot_images
+from plotting.plotting import plot_images
 
 from convlstm import Seq2Seq
 from torch.utils.data import DataLoader

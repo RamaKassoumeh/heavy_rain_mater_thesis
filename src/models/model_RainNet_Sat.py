@@ -1,3 +1,12 @@
+import sys
+import os
+current = os.path.dirname(os.path.realpath(__file__))
+parent = os.path.dirname(current)
+parparent = os.path.dirname(parent)
+sys.path.append(current)
+sys.path.append(parent)
+sys.path.append(parparent)
+
 from RadarFilterImageDataset import RadarFilterImageDataset
 from RadarFilterRainNetSatelliteDataset import RadarFilterRainNetSatelliteDataset
 
@@ -7,8 +16,8 @@ import model
 
 
 train_dataset = RadarFilterRainNetSatelliteDataset(
-    img_dir='/raid/heavyrain_dataset/RadarData_summer_18_19',
-    sat_dir='/raid/heavyrain_dataset/SatelliteData_18_19',
+    img_dir='/raid/heavyrain_dataset/RadarData_summer_18_19/',
+    sat_dir='/raid/heavyrain_dataset/SatelliteData_summer_18_19/',
     transform=model.radar_transform,
     inverse_transform=model.radar_inverseTransform,
     sat_transform=model.satellite_transform,
@@ -16,8 +25,8 @@ train_dataset = RadarFilterRainNetSatelliteDataset(
 )
 
 validate_data = RadarFilterRainNetSatelliteDataset(
-    img_dir='/raid/heavyrain_dataset/RadarData_summer_20',
-    sat_dir='/raid/heavyrain_dataset/SatelliteData_summer_20',
+    img_dir='/raid/heavyrain_dataset/RadarData_summer_20/',
+    sat_dir='/raid/heavyrain_dataset/SatelliteData_summer_20/',
     transform=model.radar_transform,
     inverse_transform=model.radar_inverseTransform,
     sat_transform=model.satellite_transform,
@@ -25,8 +34,8 @@ validate_data = RadarFilterRainNetSatelliteDataset(
 )
 
 test_data = RadarFilterRainNetSatelliteDataset(
-    img_dir='/raid/heavyrain_dataset/RadarData_summer_20',
-    sat_dir='/raid/heavyrain_dataset/SatelliteData_summer_20',
+    img_dir='/raid/heavyrain_dataset/RadarData_summer_20/',
+    sat_dir='/raid/heavyrain_dataset/SatelliteData_summer_20/',
     transform=model.radar_transform,
     inverse_transform=model.radar_inverseTransform,
     sat_transform=model.satellite_transform,
@@ -36,4 +45,4 @@ test_data = RadarFilterRainNetSatelliteDataset(
 modelRainnet=RainNet()
 file_name='radar_trainer_30M_RainNet_3d_Sat_summer'
 
-model.train_model(train_dataset,validate_data,test_data,modelRainnet,file_name,batch_size=1)
+model.train_model(train_dataset,validate_data,test_data,modelRainnet,file_name,batch_size=50)

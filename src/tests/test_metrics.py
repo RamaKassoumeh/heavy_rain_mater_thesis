@@ -1,9 +1,19 @@
+import sys
+import os
+current = os.path.dirname(os.path.realpath(__file__))
+parent = os.path.dirname(current)
+parparent = os.path.dirname(parent)
+sys.path.append(current)
+sys.path.append(parent)
+sys.path.append(parparent)
+
+
 import ast
 import cv2
 import numpy as np
 from sklearn.metrics import confusion_matrix, mean_squared_error,mean_absolute_error
 import torch
-from plotting import plot_images
+from plotting.plotting import plot_images
 from torch.utils.data import DataLoader
 
 from datetime import datetime
@@ -14,7 +24,7 @@ min_value=0
 max_value=200
 
 # read data from file
-with open("analyse_satellite_IQR.txt", 'r') as file:
+with open(f"{parparent}/src/analyse/analyse_satellite_IQR.txt", 'r') as file:
     lines = file.readlines()
 
 data = {}
@@ -80,8 +90,8 @@ satellite_transform = transforms.Compose([
 categories_threshold={'undefined':(-999, 0),'light rain':(0, 2.5), 'moderate rain':(2.5, 7.5), 'heavy rain':(7.5, 50),'Violent rain':(50, 201)}# Function to categorize pixel values based on thresholds
 
 def calculate_cat_csi(predicted, actual, category):
-    actual_label=actual.detach().cpu().numpy().astype(int)
-    predicted_label=predicted.detach().cpu().numpy().astype(int)
+    actual_label=actual.detach().cpu().numpy().astype(float)
+    predicted_label=predicted.detach().cpu().numpy().astype(float)
     # Calculate confusion matrix
     cm = confusion_matrix((actual_label>= categories_threshold[category][0]).astype(int) & (actual_label< categories_threshold[category][1]).astype(int), (predicted_label>= categories_threshold[category][0]).astype(int) & (predicted_label< categories_threshold[category][1]).astype(int), labels=[0, 1])
     # Check the shape of the confusion matrix
@@ -168,7 +178,7 @@ def calculate_fractional_coverage_fast(grid, lower_threshold, upper_threshold, n
     np.ndarray: Fractional coverage for each grid point.
     """
     grid = grid.squeeze(1,2)
-    grid = grid.cpu().numpy()
+    grid = grid.detach().cpu().numpy()
     fractional_coverage = np.zeros_like(grid, dtype=float)
     for b in range(grid.shape[0]):
             BP = np.where((grid[b] >= lower_threshold) & (grid[b] < upper_threshold), 1, 0)
@@ -245,7 +255,8 @@ def calculate_filtered_mse(y_true, y_pred):
     y_true_filtered, y_pred_filtered = filter_negative_values(y_true, y_pred)
     # mse = mean_squared_error(y_true_filtered, y_pred_filtered)
     mae= mean_absolute_error(y_true_filtered, y_pred_filtered)
-    return mse
+    return mae
+
 rmse_values = []
 # Calculate CSI for each category across all images
 csi_values = {category: [] for category in categories_threshold.keys()}
@@ -280,12 +291,12 @@ def test_phase(file_name,model,test_data,test_file_name,batch_size):
     )
     model=torch.nn.DataParallel(model)
     model.cuda()
-    model.load_state_dict(torch.load(f"models/{file_name}_model.pth"), strict=False)
+    model.load_state_dict(torch.load(f"{parparent}/models_file/{file_name}_model.pth"), strict=False)
     # Use GPU if available
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
-    output_file_path = f'results/{file_name}_test_results_{timestamp}.txt'  # Specify the file path where you want to save the resultsspatial_errors = []
+    output_file_path = f'{parparent}/results/{file_name}_test_results_{timestamp}.txt'  # Specify the file path where you want to save the resultsspatial_errors = []
     model.eval()
     with torch.no_grad():
         for batch_num, (input, target) in enumerate(tqdm(test_loader), 1):

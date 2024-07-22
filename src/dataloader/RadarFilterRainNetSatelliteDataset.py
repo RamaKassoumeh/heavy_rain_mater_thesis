@@ -1,4 +1,11 @@
+import sys
 import os
+current = os.path.dirname(os.path.realpath(__file__))
+parent = os.path.dirname(current)
+parparent = os.path.dirname(parent)
+sys.path.append(current)
+sys.path.append(parent)
+sys.path.append(parparent)
 
 import glob
 import h5py
@@ -54,7 +61,7 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
         self.satellite_data_array=np.load(img_dir+'/satellite_data_array.npy')
 
         # read data from file of low and high values for each band
-        with open("analyse_satellite_IQR.txt", 'r') as file:
+        with open(f"{parparent}/src/analyse/analyse_satellite_IQR.txt", 'r') as file:
             lines = file.readlines()
         data = {}
         for line in lines:
@@ -75,7 +82,7 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
     def read_radar_image(self,indx,return_original=False):
         try:
             img_path =  self.img_names[indx]
-            print(img_path)
+            # print(f"{indx}:radar:{img_path[-14:-4]}")
             file = h5py.File(img_path, 'r')
             a_group_key = list(file.keys())[0]
             dataset_DXk = file.get(a_group_key)
@@ -118,7 +125,7 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
 
     def read_updample_satellite_image(self,indx):
         satellite_file_name =  self.satellite_names[indx]
-        print(satellite_file_name)
+        # print(f"{indx}:satellite:{satellite_file_name[-30:-20]}")
         # satellite_dataset = gdal.Open(satellite_file_name)
         # # Perform the upsampling
         # output_satellite_dataset = gdal.Warp('', satellite_dataset, options=self.warp_options)
@@ -157,10 +164,12 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
         return random_array
         
     def __getitem__(self, idx):
+        # print(idx)
         radar_array=[]  
         satellite_array=[]
         # read 6 frames as input (0.5 hours), the current is the target
-        for i in range(1,7):         
+        for i in range(1,7):      
+            
             radar_image=self.read_radar_image(self.radar_data_array[idx]-i)
             radar_array.append(radar_image)
             # satellite_image=self.read_satellite_image(self.satellite_data_array[idx]-i)
@@ -169,6 +178,9 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
             else:
                 satellite_image=self.read_updample_satellite_image(self.satellite_data_array[idx]-i)
             satellite_array.append(satellite_image)
+            # print(f"{idx}:radar:{self.img_names[self.radar_data_array[idx]-i][-14:-4]}")
+            # print(f"{idx}:satellite:{self.satellite_names[self.satellite_data_array[idx]-i][-30:-20]}")
+            # assert int(self.img_names[self.radar_data_array[idx]-i][-14:-4])  >=  int(self.satellite_names[self.satellite_data_array[idx]-i][-30:-20])-4 and int(self.img_names[self.radar_data_array[idx]-i][-14:-4])  <=  int(self.satellite_names[self.satellite_data_array[idx]-i][-30:-20])
 
         label_image=self.read_radar_image(self.radar_data_array[idx])
 

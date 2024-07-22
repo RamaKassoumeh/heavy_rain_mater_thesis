@@ -1,17 +1,19 @@
-from datetime import datetime
+import ast
+from datetime import datetime, timedelta
 
-import cv2
+import PIL
 import matplotlib.pyplot as plt
 import numpy as np
+import rasterio
 import torch
 import torch.nn as nn
 from torch.optim import Adam
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
-from RadarFilterRainNet3DDataset import RadarFilterRainNetDataset
+from RadarFilterRainNetSatelliteDataset import RadarFilterRainNetSatelliteDataset
 
-from RainNet3D import RainNet
-from plotting import plot_images
+from RainNet_Satellite_4_layers import RainNet
+from plotting.plotting import plot_images
 
 from convlstm import Seq2Seq
 from torch.utils.data import DataLoader
@@ -21,30 +23,27 @@ import glob
 from PIL import Image
 import io
 from sklearn.metrics import mean_squared_error
-
+from rasterio.enums import Resampling
 
 from torchvision import transforms
 import numpy as np
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
 
-from test_metrics import calculate_metrics
-
 decimal_places = 3
 
 # Multiply the tensor by 10^decimal_places
 factor = 10 ** decimal_places
-
-folder_name='radar_trainer_30M_RainNet_288_size_log_200_normalize_3d_2018'
+timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+file_name='radar_trainer_30M_RainNet_Sat_288_size_log_200_normalize_3d_sat'
 
 model=RainNet()
 model=torch.nn.DataParallel(model)
 model.cuda()
-# model.load_state_dict(torch.load(folder_name+'_model.pth'), strict=False)
-model.load_state_dict(torch.load(f"models/{folder_name}_model.pth"), strict=False)
-
-
+model.load_state_dict(torch.load(f"{file_name}_model.pth"), strict=False)
+# from ipywidgets import widgets, HBox
 radar_data_folder_path = '../RadarData_test_18/'
+Satellite_dir='../SatelliteData/'
 # Use GPU if available
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -53,9 +52,20 @@ print(device)
 # MovingMNIST = np.load('mnist_test_seq.npy').transpose(1, 0, 2, 3)
 min_value=0
 max_value=200
-mean=0.21695
-std=0.9829
-# # make transforms
+
+# read data from file
+with open("analyse_satellite_IQR.txt", 'r') as file:
+    lines = file.readlines()
+
+data = {}
+for line in lines:
+    key, value = line.split(':', 1)
+    key = key.strip()
+    value = value.strip()
+    value = value.replace('array', '')  # Remove 'array' to make it a valid dictionary
+    data[key] = ast.literal_eval(value)
+
+
 def custom_transform1(x):
     # Use PyTorch's where function to apply the transformation element-wise
     return torch.where(x >= 0, x + 1, x)
@@ -80,17 +90,12 @@ transform = transforms.Compose([
     
 ])
 
-# # Declaring the variable by using square kernels and equal stride
-# c = nn.Conv3d(18, 35, 5, stride=1,padding="same")
 
-# # Describing the input and output variables
-# input = torch.randn(22, 18, 12, 52, 102)
-# output = c(input)
-
-# # Print output
-# print(output) 
-
-
+resampling_method='lanczos'
+target_width=288
+target_height=288
+bands_min_values = data.get("Min values", {})
+bands_max_values = data.get("Max values", {})
 def invert_custom_transform1(x):
     # Use PyTorch's where function to apply the transformation element-wise
     return torch.where(x > -0.1, x-1, x)
@@ -112,8 +117,21 @@ inverseTransform= transforms.Compose([
     transforms.Lambda(lambda x: x) 
 ])
 
-test_data = RadarFilterRainNetDataset(
+def normalize_Satellite(x):
+    for i in range(x.size(0)):
+        key=list(bands_min_values.keys())[i]
+        x[i] = (x[i]-bands_min_values[key])/(bands_max_values[key]-bands_min_values[key])
+    return x
+
+sat_transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Lambda(normalize_Satellite),
+    ])
+
+
+test_data = RadarFilterRainNetSatelliteDataset(
     img_dir='../RadarData_test_18/',
+    sat_dir=Satellite_dir,
     transform=transform,
     inverse_transform=inverseTransform
 )
@@ -122,7 +140,123 @@ test_loader = DataLoader(
     batch_size=200,
     shuffle=False
 )
+def read_radar_image(event_path):
+        try:
+            img_path =  event_path
+            
+            file = h5py.File(img_path, 'r')
+            a_group_key = list(file.keys())[0]
+            dataset_DXk = file.get(a_group_key)
 
+            ds_arr = dataset_DXk.get('image')[:]  # the image data in an array of floats
+            
+            # print((np.count_nonzero(ds_arr)/ ds_arr.size) * 100)
+            # print((np.count_nonzero(ds_arr)/ ds_arr.size) * 100)
+            gain_rate=dataset_DXk.get('what').attrs["gain"]
+            ds_arr = np.where(ds_arr >0, ds_arr * gain_rate, ds_arr)
+
+            ds_arr=np.round(ds_arr,3)
+            ds_arr = np.where(ds_arr >200, 200, ds_arr)
+            # Convert the 2D array to a PIL Image           
+            image = Image.fromarray(ds_arr[137:436, 58:357]) # get only NRW radar area
+            resized_image = image.resize((288, 288),PIL.Image.NEAREST )
+                    
+            # Convert the resized image back to a 2D NumPy array
+            resized_image = np.array(resized_image)
+            # resized_image=self.transform(resized_image)
+            file.close()        
+            return resized_image # ds_arr[110:366,110:366]
+        except Exception as e:
+            print(e)
+            print(img_path)
+            raise e
+        
+def round_down_minutes(dt, round_to=5):
+    # Calculate the new rounded down minute
+    new_minute = (dt.minute // round_to) * round_to
+    # Set the minutes to the new value and reset seconds and microseconds to zero
+    dt = dt.replace(minute=new_minute, second=0, microsecond=0)
+    return dt
+       
+def read_updample_satellite_image(satellie_file):
+        
+        satellite_file_name = satellie_file
+        with rasterio.open(satellite_file_name) as src:
+            # Calculate the transform for the new dimensions
+            transform = src.transform * src.transform.scale(
+                (src.width / target_width),
+                (src.height / target_height)
+            )
+
+            # Read the data from the source dataset and resample
+            data_array = src.read(
+                out_shape=(src.count, target_height, target_width),
+                resampling=Resampling.lanczos
+            )
+        return data_array
+
+def get_filename_by_prefix(directory, prefix):
+    # Use glob to search for files matching the prefix pattern
+    pattern = os.path.join(directory, prefix + '*')
+    matching_files = glob.glob(pattern)
+    
+    if matching_files:
+        # Return the first matching file
+        return os.path.basename(matching_files[0])
+    else:
+        return None
+def getitem(event_path):
+        radar_array=[] 
+        satellite_array=[]
+        directory, filename = os.path.split(event_path)
+        prefix, extension = os.path.splitext(filename)
+
+        date_time_obj = datetime.strptime(prefix[2:12], '%y%m%d%H%M')
+        date_time_obj_sat=round_down_minutes(date_time_obj)+ timedelta(minutes=4)
+        # read 6 frames as input (0.5 hours), the current is the target
+        for i in range(1, 7):
+            five_minutes_before = date_time_obj - timedelta(minutes=5*i)
+            five_minutes_before_sat = date_time_obj_sat - timedelta(minutes=5*i)
+            previous_file_name = f"{prefix[0:2]}{five_minutes_before.strftime('%y%m%d%H%M')}{extension}"
+
+            previous_file_path = os.path.join(os.path.split(directory)[0],previous_file_name[2:8], previous_file_name) 
+            resized_image=read_radar_image(previous_file_path)
+            radar_array.append(resized_image)
+            
+            previous_Sattelie_file_name = get_filename_by_prefix(Satellite_dir,f"MSG2-SEVI-MSG15-0100-NA-{five_minutes_before_sat.strftime('%Y%m%d%H%M')}")
+            satellite_image=read_updample_satellite_image(os.path.join(Satellite_dir,previous_Sattelie_file_name))
+            satellite_array.append(satellite_image)
+
+        label_image=read_radar_image(event_path)
+
+        radar_array=np.stack(radar_array, axis=2)
+
+        batch_radar = transform(radar_array)
+		# add depth diminsion
+        batch_radar = batch_radar.unsqueeze(1)
+        # loop over satellite_array
+        # Initialize an empty list to hold the tensors
+        satellite_tensor_list = []
+        for satellite_arr in satellite_array:
+            satellite_arr = np.transpose(satellite_arr, (2, 1, 0))
+            satellite_tensor = sat_transform(satellite_arr.astype(np.float32))
+            satellite_tensor_list.append(satellite_tensor)
+            # sat_tensor=torch.from_numpy(satellite_arr.astype(np.float32))
+            # sat_tensors.append(sat_tensor)
+        # Stack the tensors into a single tensor
+        batch_satellite = torch.stack(satellite_tensor_list)    
+        # batch_satellite = self.sat_transform(satellite_array)
+        # batch = batch.unsqueeze(0)
+        # batch = batch.unsqueeze(1)
+        label=transform(label_image)
+        label = label.unsqueeze(0)
+        label = label.unsqueeze(0)
+        batch=torch.cat([batch_radar, batch_satellite], dim=1)
+        batch = batch.unsqueeze(0)
+        batch=batch.cuda()
+        label=label.cuda()
+        return batch, label
+# Define the loss function  
 # test phase
 # Define the rain categories and thresholds
 # categories = ['undefined','light rain', 'moderate rain', 'heavy rain','violent rain']
@@ -242,34 +376,6 @@ def calculate_fractional_coverage(grid, lower_threshold, upper_threshold, neighb
 
     return fractional_coverage
 
-def calculate_fractional_coverage_fast(grid, lower_threshold, upper_threshold, neighborhood_size):
-    """
-    Calculate the fractional coverage of grid points exceeding the given threshold
-    within a specified neighborhood size.
-
-    Parameters:
-    grid (np.ndarray): 2D array of precipitation values.
-    lower_threshold (float): Precipitation lower threshold.
-    upper_threshold (float): Precipitation upper threshold.
-    neighborhood_size (int): Size of the neighborhood to consider.
-
-    Returns:
-    np.ndarray: Fractional coverage for each grid point.
-    """
-    grid = grid.squeeze(1,2)
-    grid = grid.cpu().numpy()
-    fractional_coverage = np.zeros_like(grid, dtype=float)
-    for b in range(grid.shape[0]):
-            BP = np.where((grid[b] >= lower_threshold) & (grid[b] < upper_threshold), 1, 0)
-            # convert to float
-            BP = BP.astype(float)
-            # make kernel of size neighborhood_size
-            kernel = np.ones((neighborhood_size, neighborhood_size))
-            # apply the kernel to the BP using opencv
-            fractional_coverage[b] = cv2.filter2D(BP, -1, kernel, borderType=cv2.BORDER_CONSTANT)
-            # divide by the total number of points in the neighborhood
-            fractional_coverage[b] = fractional_coverage[b] / neighborhood_size ** 2
-    return fractional_coverage
 
 def calculate_fss(observed, forecasted, lower_threshold, upper_threshold, neighborhood_size):
     """
@@ -287,9 +393,9 @@ def calculate_fss(observed, forecasted, lower_threshold, upper_threshold, neighb
     float: Fractional Skill Score (FSS).
     """
     # Calculate fractional coverage for observed and forecasted grids
-    observed_fractional_coverage = calculate_fractional_coverage_fast(observed, lower_threshold, upper_threshold,
+    observed_fractional_coverage = calculate_fractional_coverage(observed, lower_threshold, upper_threshold,
                                                                  neighborhood_size)
-    forecasted_fractional_coverage = calculate_fractional_coverage_fast(forecasted, lower_threshold, upper_threshold,
+    forecasted_fractional_coverage = calculate_fractional_coverage(forecasted, lower_threshold, upper_threshold,
                                                                    neighborhood_size)
 
     # Calculate Mean Squared Error (MSE) between fractional coverages
@@ -325,66 +431,43 @@ csi_values = {category: [] for category in categories_threshold.keys()}
 
 # Calculate fss for each category across all images
 fss_values = {category: [] for category in categories_threshold.keys()}
-output_file_path = f'results/{folder_name}_test_results.txt'  # Specify the file path where you want to save the results
+output_file_path = f'results/{file_name}_test_results_{timestamp}.txt'  # Specify the file path where you want to save the results
 spatial_errors = []
 neighborhood_size=3
 model.eval()
+
 with torch.no_grad():
-    for batch_num, (input, target) in enumerate(tqdm(test_loader), 1):
-        output = model(input)
-        actual_img=inverseTransform(target)
-        predicted_img=inverseTransform(output)
-        if batch_num%100 ==0:
-            input=inverseTransform(input)
-            # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',folder_name)
-            plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,actual_img[0,0],predicted_img[0,0]], 2, 4,1,batch_num,'test',folder_name)
+    input, target = getitem('../RadarData_test_18/181209/hd1812090945.scu')
+    output = model(input)
+    actual_img=inverseTransform(target)
+    predicted_img=inverseTransform(output)
+    input=inverseTransform(input)
+    plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,actual_img[0,0],predicted_img[0,0]], 2, 4,1,1,'test',file_name)
         
-         # Calculate the squared differences between actual and predicted values
-        # squared_differences = (actual_img - predicted_img) ** 2
-    
-        # Calculate the mean of the squared differences
-        # mean_squared_error = np.mean(squared_differences.detach().cpu().numpy())
-        # mse,csi,fss=calculate_metrics(target,output)
-        # for category in categories_threshold.keys():
-        #     csi_values[category].append(csi[category])
-        #     fss_values[category].append(fss[category])
-        # Calculate RMSE
-        mse = calculate_filtered_mse(actual_img.detach().cpu().numpy(), predicted_img.detach().cpu().numpy())
-        rmse = np.sqrt(mse)
+    # Calculate RMSE
+    mse = calculate_filtered_mse(actual_img.detach().cpu().numpy(), predicted_img.detach().cpu().numpy())
+    rmse = np.sqrt(mse)
         
-        # # Append RMSE to list
-        rmse_values.append(rmse)
+
         # Flatten the images to 1D arrays for comparison
-        actual_flat = actual_img.flatten()
-        predicted_flat = predicted_img.flatten()
+    actual_flat = actual_img.flatten()
+    predicted_flat = predicted_img.flatten()
         
         # Categorize pixel values
         # actual_categorized = np.array([categorize_pixel(value, thresholds, categories) for value in actual_flat])
         # predicted_categorized = np.array([categorize_pixel(value, thresholds, categories) for value in predicted_flat])
         
         # Calculate CSI for each category
-        for category in categories_threshold.keys():
-            # csi = calculate_csi(predicted_categorized, actual_categorized, category)
-            csi=calculate_cat_csi(predicted_flat, actual_flat, category)
-            csi_values[category].append(csi)
-            fss = calculate_fss(actual_img, predicted_img, categories_threshold[category][0],
+    for category in categories_threshold.keys():
+        csi=calculate_cat_csi(predicted_flat, actual_flat, category)
+        csi_values[category].append(csi)
+        fss = calculate_fss(actual_img, predicted_img, categories_threshold[category][0],
                         categories_threshold[category][1], neighborhood_size)
-            fss_values[category].append(fss)
-        #print(f"test batch number={batch_num}")
-        # add test metrics
-        if batch_num%10 ==0:
-            predicted_img=invert_custom_transform2(predicted_img)
-            spatial_error = check_spetial_residual(actual_img,predicted_img)
-            spatial_errors.append(spatial_error)
-
-
-# Calculate the average RMSE across all images
-average_rmse = np.mean(rmse_values)
-
-# Display the results
-print(f"Average RMSE across all images: {average_rmse}")
+        fss_values[category].append(fss)
+        
+print(f"Average RMSE across all images: {rmse}")
 with open(output_file_path, 'w') as file:
-    file.write(f"\nAverage RMSE across all images: {average_rmse}\n")
+    file.write(f"\nAverage RMSE across all images: {rmse}\n")
 
     # Calculate the average CSI for each category across all images
     average_csi = {category: np.nanmean(csi_values[category]) for category in categories_threshold.keys()}
@@ -402,20 +485,3 @@ with open(output_file_path, 'w') as file:
         print(f"{category}: {avg_fss}")
         file.write(f"\nAverage FSS for category: {category}: {avg_fss}\n")
     file.close()
-
-# # Create Heatmaps
-# for i, spatial_error in enumerate(spatial_errors):
-#     plt.figure()
-#     sns.heatmap(spatial_error[0,0].detach().cpu().numpy(), cmap='viridis')
-#     plt.title(f'Spatial Error Heatmap (Image {i + 1})')
-#     plt.savefig(f"output/Errors/Spatial Error Heatmap (Image {i + 1})")
-#     plt.close()
-
-# # Create Contour Plots
-# for i, spatial_error in enumerate(spatial_errors):
-#     plt.figure()
-#     contour = plt.contour(spatial_error[0,0].detach().cpu().numpy(), cmap='viridis')
-#     plt.title(f'Spatial Error Contour Plot (Image {i + 1})')
-#     plt.colorbar(contour)
-#     plt.savefig(f"output/Errors/Spatial Error Contour (Image {i + 1})")
-#     plt.close()

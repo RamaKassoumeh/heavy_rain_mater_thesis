@@ -9,7 +9,7 @@ from torch.utils.tensorboard import SummaryWriter
 from RadarFilterImageDataset import RadarFilterImageDataset
 from RadarImageDataset import RadarImageDataset
 
-from plotting import plot_images
+from plotting.plotting import plot_images
 
 from convlstm import Seq2Seq
 from torch.utils.data import DataLoader

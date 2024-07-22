@@ -1,3 +1,12 @@
+import sys
+import os
+current = os.path.dirname(os.path.realpath(__file__))
+parent = os.path.dirname(current)
+parparent = os.path.dirname(parent)
+sys.path.append(current)
+sys.path.append(parent)
+sys.path.append(parparent)
+
 import matplotlib.pyplot as plt
 from matplotlib import patches
 from datetime import datetime
@@ -46,7 +55,7 @@ cmap = plt.cm.colors.ListedColormap([map_value_to_color(value) for value in np.l
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
 
-def plot_images(image_list, row, col, epoch, batch_num, name,folder_name):
+def plot_images(image_list, row, col, epoch, batch_num, name, folder_name, save_image=True):
     # Create a figure and divide it into two areas
     fig = plt.figure(figsize=(12, 6))  # Set overall figure size
     gs = fig.add_gridspec(1, 2, width_ratios=[5, 1])  # Divide into two areas, one with 3 times width
@@ -109,12 +118,15 @@ def plot_images(image_list, row, col, epoch, batch_num, name,folder_name):
             ax_grid[i].set_title(f't +5 mins (predict)')
     plt.tight_layout()
     # plt.show()
-    isExist = os.path.exists(f"output/{folder_name}_{timestamp}")
+    isExist = os.path.exists(f"{parparent}/output/{folder_name}_{timestamp}")
     if not isExist:
-        os.mkdir(f"output/{folder_name}_{timestamp}") 
+        os.mkdir(f"{parparent}/output/{folder_name}_{timestamp}") 
 
-    plt.savefig(f"output/{folder_name}_{timestamp}/{name}_{epoch}_{batch_num}")
-    plt.close()
+    if save_image:
+        plt.savefig(f"{parparent}/output/{folder_name}_{timestamp}/{name}_{epoch}_{batch_num}")
+        plt.close()
+    else:
+        return plt
 
 
 

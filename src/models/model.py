@@ -1,3 +1,12 @@
+import sys
+import os
+current = os.path.dirname(os.path.realpath(__file__))
+parent = os.path.dirname(current)
+parparent = os.path.dirname(parent)
+sys.path.append(current)
+sys.path.append(parent)
+sys.path.append(parparent)
+
 import ast
 from datetime import datetime
 import re
@@ -8,7 +17,7 @@ import torch.nn as nn
 from torch.optim import Adam
 from torch.utils.tensorboard import SummaryWriter
 
-from plotting import plot_images
+from plotting.plotting import plot_images
 
 from torch.utils.data import DataLoader, Subset
 import os
@@ -27,7 +36,7 @@ min_value=0
 max_value=200
 
 # read data from file
-with open("analyse_satellite_IQR.txt", 'r') as file:
+with open(f"{parparent}/src/analyse/analyse_satellite_IQR.txt", 'r') as file:
     lines = file.readlines()
 
 data = {}
@@ -94,20 +103,20 @@ def train_model(train_dataset,validate_data,test_data,model,file_name,batch_size
     train_dataloader = DataLoader(
         dataset=train_dataset,
         batch_size=batch_size,
-        shuffle=True
+        shuffle=True,
+        # num_workers=8
     )
 
-    validate_loader = DataLoader(
+    validate_dataloader = DataLoader(
         dataset=validate_data,
-        batch_size=10,
+        batch_size=25,
         shuffle=True
     )
     test_loader = DataLoader(
         dataset=test_data,
-        batch_size=10,
+        batch_size=25,
         shuffle=True
     )
-    input, _ = next(iter(validate_loader))
     class LogCoshLoss(nn.Module):
         def __init__(self):
             super(LogCoshLoss, self).__init__()
@@ -145,28 +154,18 @@ def train_model(train_dataset,validate_data,test_data,model,file_name,batch_size
             return loss
 
     # Get a batch
-    # input, _ = next(iter(validate_loader))
-
+    # input, _ = next(iter(validate_dataloader))
+    # for batch_num, (input, target) in enumerate(tqdm(validate_dataloader), 1):
+    #     continue
     # model=RainNet()
     no_param=sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"number of parameters in the model is {no_param}")
     model=torch.nn.DataParallel(model)
     model.cuda()
-    # optim = Adam(model.parameters(), lr=1e-4)
-    optim = Adam(model.parameters(), lr=1e-4)
+    optim = Adam(model.parameters(), lr=1e-3)
     # Define learning rate scheduler
     # scheduler_increase = torch.optim.lr_scheduler.StepLR(optim, step_size=2, gamma=10)
     scheduler_decrease = torch.optim.lr_scheduler.MultiStepLR(optim, milestones=[20,30,40], gamma=0.1)
-    # Binary Cross Entropy, target pixel values either 0 or 1
-    # criterion = nn.MSELoss()
-    # -999 -0
-    # criterion_undefined_rain = LogCoshThresholdLoss(transform(np.array([[-999]])),transform(np.array([[0]])))
-    # # 0-2.5
-    # criterion_light_rain = LogCoshThresholdLoss(transform(np.array([[0]])),transform(np.array([[2.5]])))
-    # # 2.5 - 7.5
-    # criterion_moderate_rain = LogCoshThresholdLoss(transform(np.array([[2.5]])),transform(np.array([[7.5]])))
-    # # 73.5-200
-    # criterion_heavy_rain = LogCoshThresholdLoss(transform(np.array([[7.5]])),transform(np.array([[201]])))
     num_epochs = 50
     criterion = LogCoshLoss()
     # Initializing in a separate cell, so we can easily add more epochs to the same run
@@ -177,7 +176,8 @@ def train_model(train_dataset,validate_data,test_data,model,file_name,batch_size
     fss_values = {category: [] for category in categories_threshold.keys()}
     writer = SummaryWriter(f'runs/{file_name}_{timestamp}')
     start_epoch=1
-    checkpoint_path =f'models/{file_name}_model_checkpoint_2.pth'
+    model_file_path=f'{parparent}/models_file'
+    checkpoint_path =f'{model_file_path}/{file_name}_model_checkpoint_2.pth'
     # List all files in the given directory
     files = os.listdir(f'models')
     pattern_str=f'{file_name}_model_checkpoint_(\d+)\.pth$'
@@ -190,7 +190,7 @@ def train_model(train_dataset,validate_data,test_data,model,file_name,batch_size
     if file_numbers:
         # Return the maximum file number
         max_number= max(file_numbers)
-        checkpoint_path = f'models/{file_name}_model_checkpoint_{max_number}.pth'
+        checkpoint_path = f'{model_file_path}/{file_name}_model_checkpoint_{max_number}.pth'
     # Load the checkpoint if it exists
     if os.path.exists(checkpoint_path):
         checkpoint = torch.load(checkpoint_path)
@@ -206,7 +206,6 @@ def train_model(train_dataset,validate_data,test_data,model,file_name,batch_size
         for batch_num, (input, target) in enumerate(tqdm(train_dataloader), 1):
             optim.zero_grad()
             output = model(input)
-            output=torch.round(output, decimals=3)
             output_flatten=output.flatten()
             target_flatten=target.flatten()
             
@@ -218,10 +217,10 @@ def train_model(train_dataset,validate_data,test_data,model,file_name,batch_size
             loss = criterion(output_flatten, target_flatten)
             loss.backward()
             # Gradient clipping
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optim.step()
             train_loss += loss.item()
-            if batch_num%20 ==0:
+            if batch_num%50 ==0:
                 target=radar_inverseTransform(target)
                 input=radar_inverseTransform(input)
                 output=radar_inverseTransform(output)
@@ -239,37 +238,29 @@ def train_model(train_dataset,validate_data,test_data,model,file_name,batch_size
         fss_values = {category: [] for category in categories_threshold.keys()}
         rmse_values = []
         with torch.no_grad():
-            for batch_num, (input, target) in enumerate(tqdm(validate_loader), 1):
+            for batch_num, (input, target) in enumerate(tqdm(validate_dataloader), 1):
                 output = model(input)
-                output=torch.round(output, decimals=3)
+                # output=torch.round(output, decimals=3)
                 output_flatten=output.flatten()
                 target_flatten=target.flatten()
-                # loss_undefined_rain = criterion_undefined_rain(output_flatten, target_flatten)
-                # loss_light_rain = criterion_light_rain(output_flatten, target_flatten)
-                # loss_moderate_rain = criterion_moderate_rain(output_flatten, target_flatten)
-                # loss_heavy_rain = criterion_heavy_rain(output_flatten, target_flatten)
-                # loss=0.1*loss_undefined_rain+0.2*loss_light_rain+0.3*loss_moderate_rain+0.4*loss_heavy_rain
                 loss = criterion(output_flatten, target_flatten)
                 val_loss += loss.item()
-                if epoch%2==0:
-                    actual_img=radar_inverseTransform(target)
-                    predicted_img=radar_inverseTransform(output)
-                    mse,csi,fss=calculate_metrics(actual_img,predicted_img)
-                    rmse = np.sqrt(mse)
+                actual_img=radar_inverseTransform(target)
+                predicted_img=radar_inverseTransform(output)
+                mse,csi,fss=calculate_metrics(actual_img,predicted_img)
+                rmse = np.sqrt(mse)
                     # # Append RMSE to list
-                    rmse_values.append(rmse)
-                    for category in categories_threshold.keys():
-                        csi_values[category].append(csi[category])
-                        fss_values[category].append(fss[category])
-                if batch_num%100 ==0:
+                rmse_values.append(rmse)
+                for category in categories_threshold.keys():
+                    csi_values[category].append(csi[category])
+                    fss_values[category].append(fss[category])
+                if batch_num%50 ==0:
                     target=radar_inverseTransform(target)
                     input=radar_inverseTransform(input)
                     output=radar_inverseTransform(output)
-                    # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3] ,input[0,0,input.shape[2]-4] ,input[0,0,input.shape[2]-5] ,input[0,0,input.shape[2]-6]  ,target[0][0] ,output[0][0] ], 2, 4,epoch,batch_num,'validate',file_name)
                     plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,target[0,0],output[0,0]], 2, 4,epoch,batch_num,'validate',file_name)
                
-        val_loss /= len(validate_loader.dataset)
-        # val_loss /= 128
+        val_loss /= len(validate_dataloader.dataset)
         print(f"the validate loss is {val_loss}")
         print("Epoch:{} Training Loss:{:.4f} Validation Loss:{:.4f}\n".format(
             epoch, train_loss, val_loss))
@@ -283,74 +274,48 @@ def train_model(train_dataset,validate_data,test_data,model,file_name,batch_size
         writer.add_scalars('Learning Rate', {'learning rate':current_lr}, epoch)
         writer.flush()
         # Save checkpoint every 2 epochs
-        checkpoint_path =f'models/{file_name}_model_checkpoint_{epoch}.pth'
-        if epoch% 2 == 0:
-            csi_means = {category: np.nanmean(csi_values[category]) for category in categories_threshold.keys()}
-            fss_means = {category: np.nanmean(fss_values[category]) for category in categories_threshold.keys()}
-            average_rmse = np.mean(rmse_values)
-            writer.add_scalars(f'CSI values',csi_means,epoch)
-            writer.add_scalars(f'FSS values',fss_means,epoch)
-            writer.add_scalars(f'MSE values',{'MSE':average_rmse},epoch)
+        checkpoint_path =f'{model_file_path}/{file_name}_model_checkpoint_{epoch}.pth'
+        csi_means = {category: np.nanmean(csi_values[category]) for category in categories_threshold.keys()}
+        fss_means = {category: np.nanmean(fss_values[category]) for category in categories_threshold.keys()}
+        average_rmse = np.mean(rmse_values)
+        writer.add_scalars(f'CSI values',csi_means,epoch)
+        writer.add_scalars(f'FSS values',fss_means,epoch)
+        writer.add_scalars(f'MSE values',{'MSE':average_rmse},epoch)
+        if epoch % 2 == 0:
             torch.save({
                     'epoch': epoch,
                     'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optim.state_dict(),
                 }, checkpoint_path)
             print(f'Checkpoint saved at epoch {epoch + 1}')
-        # if epoch < 5:
-            # scheduler_increase.step()
         scheduler_decrease.step()
 
     # Save the model's state dictionary
-    torch.save(model.state_dict(), f'models/{file_name}_model.pth')
+    torch.save(model.state_dict(), f'{model_file_path}/{file_name}_model.pth')
 
     # Save the optimizer's state dictionary if needed
-    torch.save(optim.state_dict(), f'models/{file_name}_optimizer.pth')
+    torch.save(optim.state_dict(), f'{model_file_path}/{file_name}_optimizer.pth')
 
     # Calculate RMSE for each image
     rmse_values = []
 
-    output_file_path = file_name+'_results.txt'  # Specify the file path where you want to save the results
+    output_file_path = f'{parparent}/results/{file_name}_results.txt'  # Specify the file path where you want to save the results
 
-    # model.eval()
-    # csi_values.clear()
-    # fss_values.clear()
-    # # Initilize CSI & FSS for each category across all images
-    # csi_values = {category: [] for category in categories_threshold.keys()}
-    # fss_values = {category: [] for category in categories_threshold.keys()}
-    # rmse_values = []
-    # with torch.no_grad():
-    #     for batch_num, (input, target) in enumerate(tqdm(test_loader), 1):
-    #         output = model(input)
-    #         actual_img=radar_inverseTransform(target)
-    #         predicted_img=radar_inverseTransform(output)
-    #         mse,csi,fss=calculate_metrics(actual_img,predicted_img)
-    #         for category in categories_threshold.keys():
-    #             csi_values[category].append(csi[category])
-    #             fss_values[category].append(fss[category])
-    #         # Append RMSE to list
-    #         rmse_values.append(mse)
-    #         if batch_num%100 ==0:
-    #             input=radar_inverseTransform(input)
-    #             # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',file_name)
-    #             plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,actual_img[0,0],predicted_img[0,0]], 2, 4,1,batch_num,'test',file_name)
-            
+    # save the results
+    with open(output_file_path, 'w') as file:
+        file.write(f"test on file {file_name}\n")
+        file.write(f"\nAverage RMSE across all images: {average_rmse}\n")
+        average_csi = {category: np.nanmean(csi_values[category]) for category in categories_threshold.keys()}
+        average_fss = {category: np.nanmean(fss_values[category]) for category in categories_threshold.keys()}
 
-    # # Calculate the average RMSE across all images
-    # average_rmse = np.mean(rmse_values)
-
-    # # Display the results
-    # print(f"Average RMSE across all images: {average_rmse}")
-    # with open(f'results/{output_file_path}', 'w') as file:
-    #     file.write(f"\nAverage RMSE across all images: {average_rmse}\n")
-
-    #     # Calculate the average CSI for each category across all images
-    #     average_csi = {category: np.mean(csi_values[category]) for category in categories_threshold.keys()}
-
-    #     # Display the results
-    #     print("Average CSI for each category across all images:")
-    #     for category, avg_csi in average_csi.items():
-    #         print(f"{category}: {avg_csi}")
-    #         file.write(f"\nAverage CSI for category: {category}: {avg_csi}\n")
-    #     file.close()
-
+        # Display the results
+        print("Average CSI for each category across all images:")
+        for category, avg_csi in average_csi.items():
+            print(f"{category}: {avg_csi}")
+            file.write(f"\nAverage CSI for category: {category}: {avg_csi}\n")
+        # Display the results
+        print("Average FSS for each category across all images:")
+        for category, avg_fss in average_fss.items():
+            print(f"{category}: {avg_fss}")
+            file.write(f"\nAverage FSS for category: {category}: {avg_fss}\n")
+        file.close()

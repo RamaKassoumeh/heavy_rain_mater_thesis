@@ -95,12 +95,14 @@ def check_conditions(event_persentage,event_max_precipitation,current_event_no,r
     # chekc if the previous 6 radar files are exist
     date_time_obj,sat_index=check_satellite_file_exist(radar_file)
     
-    if sat_index!=-1 and check_satellite_corrupted_file(sat_index) and check_previous_radar_files_exist(radar_file) and check_previous_satellite_files_exist(date_time_obj):
-        print(radar_file)
+    # if sat_index!=-1 and check_satellite_corrupted_file(sat_index) and check_previous_radar_files_exist(radar_file) and check_previous_satellite_files_exist(date_time_obj):
+    if sat_index!=-1 and check_previous_radar_files_exist(radar_file) and check_previous_satellite_files_exist(date_time_obj):
         if event_persentage>=threshold_persentage or event_max_precipitation>=max_threshold_persentage:
             accepted_events.append(current_event_no)
             satellite_events.append(sat_index)
-            print(f"radar {radar_file} & Satellie {satellite_list[sat_index]}")
+            print(f"radar {radar_file[-14:]} & Satellie {satellite_list[sat_index]}")
+            # if int(satellite_list[sat_index][-30:-20])-4!=int(radar_files_all[current_event_no][-14:-4]):
+                # print("not matched")
             return True
         
         elif event_persentage<threshold_persentage and zero_counter/total_files*100<=zero_persentage:
@@ -108,19 +110,21 @@ def check_conditions(event_persentage,event_max_precipitation,current_event_no,r
             satellite_events.append(sat_index)
             zero_counter=zero_counter+1
             print(f"radar {radar_file} & Satellie {satellite_list[sat_index]}")
+            # if int(satellite_list[sat_index][-30:-20])-4!=int(radar_file[-14:-4]):
+                # print("not matched")
             return True
     return False
 
 train_data = '/raid/heavyrain_dataset/RadarData_18/'
 validate_data = '/raid/heavyrain_dataset/RadarData_validate_18/'
-test_data = '/raid/heavyrain_dataset/RadarData_summer_20/'
+test_data = '../RadarData_summer_18_19/'
 
-satellite_data='/raid/heavyrain_dataset/SatelliteData_summer_20/'
+satellite_data='../SatelliteData_summer_18_19/'
 min_value=0
 max_value=0
 
 satellite_list=[]
-
+radar_files_all=[]
 def process_data(radar_data_folder_path):
     flattened_arrays = []
     index=0
@@ -132,7 +136,10 @@ def process_data(radar_data_folder_path):
         # Check if the path is a directory
         if os.path.isdir(folder_path):
             radar_files = sorted(glob.glob(os.path.join(folder_path, '*.scu')))
-            total_files += len(radar_files)
+            for radar_file in radar_files:
+                # Construct the full path to the file
+                radar_files_all.append(radar_file)
+            total_files += len(radar_files_all)
 
     for sat_filename in sorted(os.listdir(satellite_data)):
         # Check if the file name starts with the given prefix
@@ -158,8 +165,6 @@ def process_data(radar_data_folder_path):
             # print(f"\nProcessing folder: {folder_path}")
             # use glob.glob to read all files in the folder order by name
             radar_files = sorted(glob.glob(os.path.join(folder_path, '*.scu')))
-            # Walk through all directories and files inside the current folder
-            radar_day_file = []
             # Process each file in the current directory
             for radar_file in radar_files:
                 # Construct the full path to the file           
@@ -171,6 +176,7 @@ def process_data(radar_data_folder_path):
                     ds_arr = np.where(ds_arr >0, ds_arr * gain_rate, ds_arr)
 
                     if np.max(ds_arr)>200:
+                        index+=1
                         file.close()
                         continue
                     ds_arr=ds_arr[110:360,110:390]
@@ -195,16 +201,16 @@ def process_data(radar_data_folder_path):
                     
     # Concatenate all the flattened arrays together
     # combined_array = np.concatenate(flattened_arrays)
-    print(f"the mean is {np.mean(means)}")
+    # print(f"the mean is {np.mean(means)}")
     # mean and std
-    count=count*ds_arr.shape[0]*ds_arr.shape[1]
-    total_mean = total_sum / count
-    total_var  = (total_sum_square / count) - (total_mean ** 2)
-    total_std  = np.sqrt(total_var)
+    # count=count*ds_arr.shape[0]*ds_arr.shape[1]
+    # total_mean = total_sum / count
+    # total_var  = (total_sum_square / count) - (total_mean ** 2)
+    # total_std  = np.sqrt(total_var)
 
-    # output
-    print('mean: '  + str(total_mean))
-    print('std:  '  + str(total_std))
+    # # output
+    # print('mean: '  + str(total_mean))
+    # print('std:  '  + str(total_std))
     # print(f"the std is {combined_array.std()}")
     # print(f"the max is {np.max(combined_array)}")
     # print(f"count of data points have error is {(np.count_nonzero(combined_array>100)/ combined_array.size) * 100}")

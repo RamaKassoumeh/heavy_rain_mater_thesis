@@ -11,7 +11,7 @@ from RadarFilterRainNet3DDataset import RadarFilterRainNetDataset
 # from RadarFilterRainNetDataset import RadarFilterRainNetDataset
 
 from RainNet3D import RainNet
-from plotting import plot_images
+from plotting.plotting import plot_images
 
 from convlstm import Seq2Seq
 from torch.utils.data import DataLoader
@@ -120,7 +120,7 @@ timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
 train_dataloader = DataLoader(
     dataset=train_dataset,
-    batch_size=20,
+    batch_size=1,
     shuffle=True
 )
 
@@ -181,8 +181,8 @@ model=torch.nn.DataParallel(model)
 no_param=sum(p.numel() for p in model.parameters() if p.requires_grad)
 print(f"number of parameters in the model is {no_param}")
 model.cuda()
-# optim = Adam(model.parameters(), lr=1e-4)
-optim = Adam(model.parameters(), lr=0.1)
+optim = Adam(model.parameters(), lr=3e-4)
+# optim = Adam(model.parameters(), lr=0.1)
 # Define learning rate scheduler
 # scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=5, gamma=0.1)
 scheduler = torch.optim.lr_scheduler.MultiStepLR(optim, milestones=[10,6,4], gamma=0.1)
@@ -207,7 +207,7 @@ csi_values = {category: [] for category in categories_threshold.keys()}
 fss_values = {category: [] for category in categories_threshold.keys()}
 writer = SummaryWriter(f'runs/{file_name}_{timestamp}')
 start_epoch=1
-checkpoint_path =f'models/{file_name}_model_checlpoint.pth'
+checkpoint_path =f'models/{file_name}_model_checlpoint2.pth'
 # Load the checkpoint if it exists
 if os.path.exists(checkpoint_path):
     checkpoint = torch.load(checkpoint_path)
@@ -244,7 +244,7 @@ for epoch in range(1, num_epochs + 1):
         # print(f"the accurecy is {acc}")
         # print(f"the train loss is {train_loss}")
         print(f"batch number={batch_num} in epoch {epoch}")
-        if batch_num%100 ==0:
+        if batch_num%10 ==0:
             target=inverseTransform(target)
             input=inverseTransform(input)
             output=inverseTransform(output)
