@@ -21,14 +21,13 @@ from plotting.plotting import plot_images
 
 from torch.utils.data import DataLoader, Subset
 import os
-from PIL import Image
 
 import numpy as np
 from sklearn.metrics import confusion_matrix
 
 from tqdm import tqdm
 
-from test_metrics import calculate_metrics,categories_threshold
+from tests.test_metrics import calculate_metrics,categories_threshold
 from torchvision import transforms
 
 
@@ -179,7 +178,7 @@ def train_model(train_dataset,validate_data,test_data,model,file_name,batch_size
     model_file_path=f'{parparent}/models_file'
     checkpoint_path =f'{model_file_path}/{file_name}_model_checkpoint_2.pth'
     # List all files in the given directory
-    files = os.listdir(f'models')
+    files = os.listdir(f'{model_file_path}')
     pattern_str=f'{file_name}_model_checkpoint_(\d+)\.pth$'
     # Regular expression to match files named in the format t<number>
     pattern = re.compile(pattern_str)

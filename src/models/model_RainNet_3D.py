@@ -7,11 +7,10 @@ sys.path.append(current)
 sys.path.append(parent)
 sys.path.append(parparent)
 
-# from RadarFilterImageDataset import RadarFilterImageDataset
-from RadarFilterRainNet3DDataset import RadarFilterRainNetDataset
-# from RadarFilterRainNetDataset import RadarFilterRainNetDataset
+from dataloader.RadarFilterRainNet3DDataset import RadarFilterRainNetDataset
 
-from RainNet3D import RainNet
+from models.RainNet3D import RainNet
+
 import model
 
 

@@ -7,13 +7,10 @@ sys.path.append(current)
 sys.path.append(parent)
 sys.path.append(parparent)
 
-from RadarFilterImageDataset import RadarFilterImageDataset
-from RadarFilterRainNetSatelliteDataset import RadarFilterRainNetSatelliteDataset
+from dataloader.RadarFilterRainNetSatelliteDataset import RadarFilterRainNetSatelliteDataset
 
-from RainNet_Satellite import RainNet
+from models.RainNet_Satellite import RainNet
 import model
-
-
 
 train_dataset = RadarFilterRainNetSatelliteDataset(
     img_dir='/raid/heavyrain_dataset/RadarData_summer_18_19/',
