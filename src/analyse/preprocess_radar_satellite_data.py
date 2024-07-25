@@ -100,7 +100,7 @@ def check_conditions(event_persentage,event_max_precipitation,current_event_no,r
         if event_persentage>=threshold_persentage or event_max_precipitation>=max_threshold_persentage:
             accepted_events.append(current_event_no)
             satellite_events.append(sat_index)
-            print(f"radar {radar_file[-14:]} & Satellie {satellite_list[sat_index]}")
+            print(f"radar {radar_file} & Satellie {satellite_list[sat_index]}")
             # if int(satellite_list[sat_index][-30:-20])-4!=int(radar_files_all[current_event_no][-14:-4]):
                 # print("not matched")
             return True
@@ -115,13 +115,17 @@ def check_conditions(event_persentage,event_max_precipitation,current_event_no,r
             return True
     return False
 
-train_data = '/raid/heavyrain_dataset/RadarData_18/'
-validate_data = '/raid/heavyrain_dataset/RadarData_validate_18/'
-test_data = '../RadarData_summer_18_19/'
+# train_data = '/raid/heavyrain_dataset/RadarData_18/'
+# validate_data = '/raid/heavyrain_dataset/RadarData_validate_18/'
+test_data = '/home/gouda/heavyrain/RadarData_summer_20/'
 
-satellite_data='../SatelliteData_summer_18_19/'
+satellite_data='/home/gouda/heavyrain/SatelliteData_summer_20/'
 min_value=0
 max_value=0
+
+# Function to extract the date part and convert to datetime object
+def extract_date(file_name):
+    return file_name[-30:-20]
 
 satellite_list=[]
 radar_files_all=[]
@@ -141,7 +145,7 @@ def process_data(radar_data_folder_path):
                 radar_files_all.append(radar_file)
             total_files += len(radar_files_all)
 
-    for sat_filename in sorted(os.listdir(satellite_data)):
+    for sat_filename in sorted(os.listdir(satellite_data), key=extract_date):
         # Check if the file name starts with the given prefix
         if sat_filename.endswith('.tif'):
             # add the file name to the list

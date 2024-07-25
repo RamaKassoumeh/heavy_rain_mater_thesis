@@ -17,7 +17,7 @@ import torch.nn as nn
 from torch.optim import Adam
 from torch.utils.tensorboard import SummaryWriter
 
-from plotting.plotting import plot_images
+from src.plotting.plotting import plot_images
 
 from torch.utils.data import DataLoader, Subset
 import os
@@ -94,28 +94,38 @@ satellite_transform = transforms.Compose([
     transforms.Lambda(normalize_Satellite),
     ])
 
+def denormalize_Satellite(x):
+    for i in range(x.size(0)):
+        key=list(bands_min_values.keys())[i]
+        x[i] = x[i]*(bands_max_values[key]-bands_min_values[key])+bands_min_values[key]
+    return x
 
+satellite_inverseTransform = transforms.Compose([
+    transforms.Lambda(denormalize_Satellite),
+    ])
 
-def train_model(train_dataset,validate_data,test_data,model,file_name,batch_size):
+def train_model(train_dataset,validate_data,test_data,model,file_name,batch_size,run_name=None):
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
     train_dataloader = DataLoader(
         dataset=train_dataset,
         batch_size=batch_size,
-        shuffle=True,
+        shuffle=False,
         # num_workers=8
     )
+    # for batch_num, (input, target) in enumerate(tqdm(train_dataloader), 1):
+    #     continue
 
     validate_dataloader = DataLoader(
         dataset=validate_data,
         batch_size=25,
-        shuffle=True
+        shuffle=False
     )
-    test_loader = DataLoader(
-        dataset=test_data,
-        batch_size=25,
-        shuffle=True
-    )
+    # test_loader = DataLoader(
+    #     dataset=test_data,
+    #     batch_size=25,
+    #     shuffle=True
+    # )
     class LogCoshLoss(nn.Module):
         def __init__(self):
             super(LogCoshLoss, self).__init__()
@@ -154,17 +164,14 @@ def train_model(train_dataset,validate_data,test_data,model,file_name,batch_size
 
     # Get a batch
     # input, _ = next(iter(validate_dataloader))
-    # for batch_num, (input, target) in enumerate(tqdm(validate_dataloader), 1):
-    #     continue
-    # model=RainNet()
     no_param=sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"number of parameters in the model is {no_param}")
     model=torch.nn.DataParallel(model)
     model.cuda()
-    optim = Adam(model.parameters(), lr=1e-3)
+    optim = Adam(model.parameters(), lr=1e-4)
     # Define learning rate scheduler
     # scheduler_increase = torch.optim.lr_scheduler.StepLR(optim, step_size=2, gamma=10)
-    scheduler_decrease = torch.optim.lr_scheduler.MultiStepLR(optim, milestones=[20,30,40], gamma=0.1)
+    scheduler_decrease = torch.optim.lr_scheduler.MultiStepLR(optim, milestones=[10,30,40], gamma=0.1)
     num_epochs = 50
     criterion = LogCoshLoss()
     # Initializing in a separate cell, so we can easily add more epochs to the same run
@@ -173,7 +180,10 @@ def train_model(train_dataset,validate_data,test_data,model,file_name,batch_size
 
     # Calculate fss for each category across all images
     fss_values = {category: [] for category in categories_threshold.keys()}
-    writer = SummaryWriter(f'runs/{file_name}_{timestamp}')
+    if run_name is None:
+        run_name=f'{file_name}_{timestamp}'
+    run_file_name = f'{parparent}/runs/{run_name}'
+    
     start_epoch=1
     model_file_path=f'{parparent}/models_file'
     checkpoint_path =f'{model_file_path}/{file_name}_model_checkpoint_2.pth'
@@ -196,8 +206,11 @@ def train_model(train_dataset,validate_data,test_data,model,file_name,batch_size
         model.load_state_dict(checkpoint['model_state_dict'])
         optim.load_state_dict(checkpoint['optimizer_state_dict'])
         start_epoch = checkpoint['epoch'] + 1
+        if 'run_name' in checkpoint:
+            run_name = checkpoint['run_name']
+            run_file_name = f'{parparent}/runs/{run_name}'
         print(f"Resumed from checkpoint at epoch {start_epoch}")
-
+    writer = SummaryWriter(run_file_name)
     for epoch in range(start_epoch, num_epochs + 1):
 
         train_loss = 0
@@ -248,7 +261,7 @@ def train_model(train_dataset,validate_data,test_data,model,file_name,batch_size
                 predicted_img=radar_inverseTransform(output)
                 mse,csi,fss=calculate_metrics(actual_img,predicted_img)
                 rmse = np.sqrt(mse)
-                    # # Append RMSE to list
+                # Append RMSE to list
                 rmse_values.append(rmse)
                 for category in categories_threshold.keys():
                     csi_values[category].append(csi[category])
@@ -283,10 +296,11 @@ def train_model(train_dataset,validate_data,test_data,model,file_name,batch_size
         if epoch % 2 == 0:
             torch.save({
                     'epoch': epoch,
+                    'run_name': run_name,
                     'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optim.state_dict(),
                 }, checkpoint_path)
-            print(f'Checkpoint saved at epoch {epoch + 1}')
+            print(f'Checkpoint saved at epoch {epoch}')
         scheduler_decrease.step()
 
     # Save the model's state dictionary

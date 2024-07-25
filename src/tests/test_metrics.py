@@ -13,7 +13,7 @@ import cv2
 import numpy as np
 from sklearn.metrics import confusion_matrix, mean_squared_error,mean_absolute_error
 import torch
-from plotting.plotting import plot_images
+from src.plotting.plotting import plot_images
 from torch.utils.data import DataLoader
 
 from datetime import datetime
@@ -253,9 +253,9 @@ def filter_negative_values(y_true, y_pred):
 
 def calculate_filtered_mse(y_true, y_pred):
     y_true_filtered, y_pred_filtered = filter_negative_values(y_true, y_pred)
-    # mse = mean_squared_error(y_true_filtered, y_pred_filtered)
-    mae= mean_absolute_error(y_true_filtered, y_pred_filtered)
-    return mae
+    mse = mean_squared_error(y_true_filtered, y_pred_filtered)
+    # mae= mean_absolute_error(y_true_filtered, y_pred_filtered)
+    return mse
 
 rmse_values = []
 # Calculate CSI for each category across all images
@@ -267,6 +267,7 @@ neighborhood_size=3
 
 def calculate_metrics(actual_img,predicted_img):
     mse = calculate_filtered_mse(actual_img.detach().cpu().numpy(), predicted_img.detach().cpu().numpy())
+    # mse=1
      # Calculate CSI for each category
     for category in categories_threshold.keys():
         # csi = calculate_csi(predicted_categorized, actual_categorized, category)

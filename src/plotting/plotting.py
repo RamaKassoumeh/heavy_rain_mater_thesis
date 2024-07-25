@@ -3,16 +3,16 @@ import os
 current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
 parparent = os.path.dirname(parent)
-sys.path.append(current)
-sys.path.append(parent)
-sys.path.append(parparent)
+# sys.path.append(current)
+# sys.path.append(parent)
+# sys.path.append(parparent)
 
 import matplotlib.pyplot as plt
 from matplotlib import patches
 from datetime import datetime
 import numpy as np
 import os
-
+import matplotlib.image as mpimg
 
 # min_value=-999.0 
 min_value=0
@@ -118,11 +118,12 @@ def plot_images(image_list, row, col, epoch, batch_num, name, folder_name, save_
             ax_grid[i].set_title(f't +5 mins (predict)')
     plt.tight_layout()
     # plt.show()
-    isExist = os.path.exists(f"{parparent}/output/{folder_name}_{timestamp}")
-    if not isExist:
-        os.mkdir(f"{parparent}/output/{folder_name}_{timestamp}") 
+    
 
     if save_image:
+        isExist = os.path.exists(f"{parparent}/output/{folder_name}_{timestamp}")
+        if not isExist:
+            os.mkdir(f"{parparent}/output/{folder_name}_{timestamp}") 
         plt.savefig(f"{parparent}/output/{folder_name}_{timestamp}/{name}_{epoch}_{batch_num}")
         plt.close()
     else:
@@ -147,7 +148,7 @@ def plot_images(image_list, row, col, epoch, batch_num, name, folder_name, save_
 #     plt.savefig(f"output/image_radar_trainer_128_128_30M_filter_data_{timestamp}/{name}_{epoch}_{batch_num}")
 
 
-def plot_image(image):
+def plot_image(image,save_image=True):
     # Create a figure and divide it into two areas
     fig = plt.figure(figsize=(1,1))  # Set overall figure size
     gs = fig.add_gridspec(1, 2, width_ratios=[5, 1])  # Divide into two areas, one with 3 times width
@@ -191,7 +192,40 @@ def plot_image(image):
     ax_grid[0].imshow(image[0,:,:], cmap=cmap, vmin=-999, vmax=1000)  # Assuming grayscale images
 
     plt.tight_layout()
-    plt.savefig(f"output/radar_image")
-    plt.close()
+    if save_image:
+        plt.savefig(f"output/radar_image")
+        plt.close()
+    else:
+        return plt
 
+# Titles for the images
+titles = ['radar'] + [f'satellite_{i}' for i in range(1, 12)]
 
+def plot_radar_satellite_images(images,batch_num, name, folder_name, save_image=True):
+    # Create a figure with 2 rows and 6 columns
+    fig, axs = plt.subplots(2, 6, figsize=(18, 6))
+
+    
+    # Iterate through the image files and plot each one in the corresponding subplot
+    for i, ax in enumerate(axs.flat):
+        img = images[i].detach().cpu().numpy()
+        img = np.where(img < -0.1, -999, img)
+        if i==0:
+            ax.imshow(img, cmap=cmap, vmin=-999, vmax=1000)  # Assuming grayscale images
+        else:
+            ax.imshow(img)
+        ax.set_title(titles[i])
+        ax.axis('off')  # Hide the axis
+
+    # Adjust layout
+    plt.tight_layout()
+    
+
+    if save_image:
+        isExist = os.path.exists(f"{parparent}/output/{folder_name}_{timestamp}")
+        if not isExist:
+            os.mkdir(f"{parparent}/output/{folder_name}_{timestamp}") 
+        plt.savefig(f"{parparent}/output/{folder_name}_{timestamp}/{name}_{batch_num}")
+        plt.close()
+    else:
+        return plt

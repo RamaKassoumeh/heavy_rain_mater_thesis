@@ -23,6 +23,11 @@ import ast
 
 class RadarFilterRainNetSatelliteDataset(Dataset):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # extract date from Satellite file name
+    
+    def extract_date(self,file_name):
+        return file_name[-30:-20]
+    
     def __init__(self, img_dir,sat_dir, transform=None,inverse_transform=None,return_original=False,sat_transform=None,random_satellite=False):
         self.img_dir = img_dir
         self.sat_dir=sat_dir
@@ -54,7 +59,7 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
                 radar_files = sorted(glob.glob(os.path.join(folder_path, '*.scu')))
                 self.img_names.extend(radar_files)
         self.satellite_names = []
-        for satellite_file in sorted(os.listdir(self.sat_dir)):
+        for satellite_file in sorted(os.listdir(self.sat_dir), key=self.extract_date):
             if satellite_file.endswith('.tif'):
                 self.satellite_names.append(os.path.join(self.sat_dir, satellite_file))
         self.radar_data_array=np.load(img_dir+'/radar_data_array.npy')
@@ -180,7 +185,7 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
             satellite_array.append(satellite_image)
             # print(f"{idx}:radar:{self.img_names[self.radar_data_array[idx]-i][-14:-4]}")
             # print(f"{idx}:satellite:{self.satellite_names[self.satellite_data_array[idx]-i][-30:-20]}")
-            # assert int(self.img_names[self.radar_data_array[idx]-i][-14:-4])  >=  int(self.satellite_names[self.satellite_data_array[idx]-i][-30:-20])-4 and int(self.img_names[self.radar_data_array[idx]-i][-14:-4])  <=  int(self.satellite_names[self.satellite_data_array[idx]-i][-30:-20])
+            assert int(self.img_names[self.radar_data_array[idx]-i][-14:-4])  >=  int(self.satellite_names[self.satellite_data_array[idx]-i][-30:-20])-8 and int(self.img_names[self.radar_data_array[idx]-i][-14:-4])  <=  int(self.satellite_names[self.satellite_data_array[idx]-i][-30:-20])
 
         label_image=self.read_radar_image(self.radar_data_array[idx])
 

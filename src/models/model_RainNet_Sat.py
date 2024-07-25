@@ -42,4 +42,4 @@ test_data = RadarFilterRainNetSatelliteDataset(
 modelRainnet=RainNet()
 file_name='radar_trainer_30M_RainNet_3d_Sat_summer'
 
-model.train_model(train_dataset,validate_data,test_data,modelRainnet,file_name,batch_size=50)
+model.train_model(train_dataset,validate_data,test_data,modelRainnet,file_name,batch_size=50,run_name='radar_trainer_30M_RainNet_3d_Sat_summer_20240724_233409')

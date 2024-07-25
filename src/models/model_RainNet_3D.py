@@ -15,19 +15,19 @@ import model
 
 
 train_dataset = RadarFilterRainNetDataset(
-    img_dir='/raid/heavyrain_dataset/RadarData_summer_18_19',
+    img_dir='/home/gouda/heavyrain/RadarData_summer_18_19/',
     transform=model.radar_transform,
     inverse_transform=model.radar_inverseTransform
 )
 
 validate_data = RadarFilterRainNetDataset(
-    img_dir='/raid/heavyrain_dataset/RadarData_summer_20',
+    img_dir='/home/gouda/heavyrain/RadarData_summer_20/',
     transform=model.radar_transform,
     inverse_transform=model.radar_inverseTransform
 )
 
 test_data = RadarFilterRainNetDataset(
-    img_dir='/raid/heavyrain_dataset/RadarData_summer_20',
+    img_dir='/home/gouda/heavyrain/RadarData_summer_20/',
     transform=model.radar_transform,
     inverse_transform=model.radar_inverseTransform
 )
@@ -35,4 +35,4 @@ test_data = RadarFilterRainNetDataset(
 
 modelRainnet=RainNet()
 file_name='radar_trainer_30M_RainNet_3d_Log_summer'
-model.train_model(train_dataset,validate_data,test_data,modelRainnet,file_name,batch_size=400)
+model.train_model(train_dataset,validate_data,test_data,modelRainnet,file_name,batch_size=200,run_name='radar_trainer_30M_RainNet_3d_Log_summer_20240722_161306')
