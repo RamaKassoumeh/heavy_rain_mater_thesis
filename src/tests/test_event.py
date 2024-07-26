@@ -1,3 +1,12 @@
+import sys
+import os
+current = os.path.dirname(os.path.realpath(__file__))
+parent = os.path.dirname(current)
+parparent = os.path.dirname(parent)
+sys.path.append(current)
+sys.path.append(parent)
+sys.path.append(parparent)
+
 from datetime import datetime, timedelta
 
 import PIL
@@ -8,9 +17,9 @@ import torch.nn as nn
 from torch.optim import Adam
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
-from RadarFilterRainNet3DDataset import RadarFilterRainNetDataset
+from dataloader.RadarFilterRainNet3DDataset import RadarFilterRainNetDataset
 
-from RainNet3D import RainNet
+from models.RainNet3D import RainNet
 from plotting.plotting import plot_images
 
 from convlstm import Seq2Seq
@@ -28,6 +37,8 @@ import numpy as np
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
 
+from tests.test_metrics import calculate_metrics,categories_threshold
+
 decimal_places = 3
 
 # Multiply the tensor by 10^decimal_places
@@ -38,7 +49,7 @@ folder_name='radar_trainer_30M_RainNet_288_size_log_200_normalize_3d_2018'
 model=RainNet()
 model=torch.nn.DataParallel(model)
 model.cuda()
-model.load_state_dict(torch.load(folder_name+'_model.pth'), strict=False)
+model.load_state_dict(torch.load(f'{parparent}/models_file/{folder_name}_model.pth'), strict=False)
 # from ipywidgets import widgets, HBox
 radar_data_folder_path = '../RadarData_test_18/'
 # Use GPU if available
@@ -189,167 +200,7 @@ def getitem(event_path):
 # thresholds = [(-999, -0.1),(-0.1, 2.5), (2.5, 15), (15, 30), (30, 200)]  # Adjust based on your data
 
 
-def filter_negative_values(y_true, y_pred):
-    # Flatten the arrays to 1D
-    y_true_flat = y_true.flatten()
-    y_pred_flat = y_pred.flatten()
-    
-    # Create a mask for values >= 0 in both actual and predicted
-    mask = (y_true_flat >= 0)
-    
-    # Apply the mask to filter out negative values
-    y_true_filtered = y_true_flat[mask]
-    y_pred_filtered = y_pred_flat[mask]
-    
-    return y_true_filtered, y_pred_filtered
 
-def calculate_filtered_mse(y_true, y_pred):
-    y_true_filtered, y_pred_filtered = filter_negative_values(y_true, y_pred)
-    mse = mean_squared_error(y_true_filtered, y_pred_filtered)
-    return mse
-
-categories_threshold={'undefined':(-999, 0),'light rain':(0, 2.5), 'moderate rain':(2.5, 7.5), 'heavy rain':(7.5, 50),'Violent rain':(50, 201)}# Function to categorize pixel values based on thresholds
-
-# categories_threshold={'undefined':(-999, 0),'light rain':(0, 2), 'moderate rain':(2, 5), 'heavy rain':(5, 10),'Violent rain':(10, 201)}# Function to categorize pixel values based on thresholds
-def categorize_pixel(value, thresholds, categories):
-    for i, (lower, upper) in enumerate(thresholds):
-        if lower <= value < upper:
-            return categories[i]
-    return categories[-1]  # Return the last category as default
-
-# Function to calculate CSI for a single category
-def calculate_cat_csi(predicted, actual, category):
-    actual_label=actual.detach().cpu().numpy().astype(int)
-    predicted_label=predicted.detach().cpu().numpy().astype(int)
-    # Calculate confusion matrix
-    cm = confusion_matrix((actual_label>= categories_threshold[category][0]).astype(int) & (actual_label< categories_threshold[category][1]).astype(int), (predicted_label>= categories_threshold[category][0]).astype(int) & (predicted_label< categories_threshold[category][1]).astype(int), labels=[0, 1])
-    # Check the shape of the confusion matrix
-    # Check the shape of the confusion matrix
-    if cm.shape == (2, 2):
-        # Unpack the confusion matrix values
-        tn, fp, fn, tp = cm.ravel()
-
-        # Calculate CSI using the formula
-        if tp + fp + fn == 0:
-            # Handle the case where TP + FP + FN is zero
-            # csi = np.nan  
-            csi = 1
-        else:
-            # Calculate CSI
-            csi = tp / (tp + fp + fn)
-    else:
-        # In case the confusion matrix is not 2x2, handle appropriately
-        csi = 0 
-    # Calculate CSI
-    return csi
-
-def check_spetial_residual(actual_img,predicted_img):
-    return (actual_img - predicted_img) ** 2
-    
-
-# Function to calculate CSI for a single category
-def calculate_csi(predicted, actual, category):
-    # Calculate the confusion matrix
-    tn, fp, fn, tp = confusion_matrix(actual == category, predicted == category).ravel()
-    # Calculate CSI
-    csi = tp / (tp + fp + fn)
-    return csi
-
-
-
-def calculate_fractional_coverage(grid, lower_threshold, upper_threshold, neighborhood_size):
-    """
-    Calculate the fractional coverage of grid points exceeding the given threshold
-    within a specified neighborhood size.
-
-    Parameters:
-    grid (np.ndarray): 2D array of precipitation values.
-    lower_threshold (float): Precipitation lower threshold.
-    upper_threshold (float): Precipitation upper threshold.
-    neighborhood_size (int): Size of the neighborhood to consider.
-
-    Returns:
-    np.ndarray: Fractional coverage for each grid point.
-    """
-    grid = grid.cpu().numpy()  # Move tensor to CPU and convert to numpy array
-    padded_grid = np.pad(grid, pad_width=neighborhood_size // 2, mode='constant', constant_values=0)
-    # fractional_coverage = np.zeros_like(grid, dtype=float)
-
-    # for i in range(grid.shape[2]):
-    #     for j in range(grid.shape[3]):
-    #         neighborhood = padded_grid[:,:,i:i + neighborhood_size, j:j + neighborhood_size]
-    #         exceed_count = np.sum((neighborhood >= lower_threshold) & (neighborhood < upper_threshold))
-    #         total_points = neighborhood.size
-    #         fractional_coverage[i, j] = exceed_count / total_points
-
-    fractional_coverage = np.zeros_like(grid, dtype=float)
-    width=grid.shape[2]
-    height=grid.shape[3]
-    if len(grid.shape)==5:
-        width=grid.shape[3]
-        height=grid.shape[4]
-    pad_size = neighborhood_size // 2
-    for b in range(grid.shape[0]):
-        for t in range(grid.shape[1]):
-            padded_grid = np.pad(grid[b, t,0], pad_width=pad_size, mode='constant', constant_values=0)
-            for i in range(width):
-                for j in range(height):
-                    neighborhood = padded_grid[i:i+neighborhood_size, j:j+neighborhood_size]
-                    exceed_count = np.sum((neighborhood >= lower_threshold) & (neighborhood < upper_threshold))
-                    total_points = neighborhood.size
-                    fractional_coverage[b, t,0, i, j] = exceed_count / total_points
-    
-
-    return fractional_coverage
-
-
-def calculate_fss(observed, forecasted, lower_threshold, upper_threshold, neighborhood_size):
-    """
-    Calculate the Fractional Skill Score (FSS) for the given observed and forecasted precipitation grids
-    using a specified threshold and neighborhood size.
-
-    Parameters:
-    observed (np.ndarray): 2D array of observed precipitation values.
-    forecasted (np.ndarray): 2D array of forecasted precipitation values.
-    lower_threshold (float): Precipitation lower threshold.
-    upper_threshold (float): Precipitation upper threshold.
-    neighborhood_size (int): Size of the neighborhood to consider.
-
-    Returns:
-    float: Fractional Skill Score (FSS).
-    """
-    # Calculate fractional coverage for observed and forecasted grids
-    observed_fractional_coverage = calculate_fractional_coverage(observed, lower_threshold, upper_threshold,
-                                                                 neighborhood_size)
-    forecasted_fractional_coverage = calculate_fractional_coverage(forecasted, lower_threshold, upper_threshold,
-                                                                   neighborhood_size)
-
-    # Calculate Mean Squared Error (MSE) between fractional coverages
-    # mse = np.mean((observed_fractional_coverage - forecasted_fractional_coverage) ** 2)
-
-    # # Calculate reference MSE (MSE for no-skill forecast)
-    # # Assuming no-skill forecast is just the mean of the observed fractional coverage
-    # reference_mse = np.mean(observed_fractional_coverage ** 2)
-
-    # # Calculate FSS
-    # if reference_mse ==0:
-    #     return 0
-    # fss = 1 - (mse / reference_mse)
-
-    # Calculate the numerator and denominator for FSS
-    numerator = np.sum((forecasted_fractional_coverage - observed_fractional_coverage) ** 2)
-    denominator = np.sum(forecasted_fractional_coverage ** 2 + observed_fractional_coverage ** 2)
-    if numerator==denominator ==0:
-        return 1
-    elif denominator==0:
-        return 0
-    # Calculate FSS
-    fss = 1 - (numerator / denominator)
-
-    return fss
-
-
-# Calculate RMSE for each image
 rmse_values = []
 
 # Calculate CSI for each category across all images
@@ -357,7 +208,7 @@ csi_values = {category: [] for category in categories_threshold.keys()}
 
 # Calculate fss for each category across all images
 fss_values = {category: [] for category in categories_threshold.keys()}
-output_file_path = f'results/{folder_name}_test_results_{timestamp}.txt'  # Specify the file path where you want to save the results
+output_file_path = f'{parparent}/results/{folder_name}_test_results_{timestamp}.txt'  # Specify the file path where you want to save the results
 spatial_errors = []
 neighborhood_size=3
 model.eval()
@@ -369,30 +220,14 @@ with torch.no_grad():
     predicted_img=inverseTransform(output)
     input=inverseTransform(input)
     plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,actual_img[0,0],predicted_img[0,0]], 2, 4,1,1,'test',folder_name)
-        
-    # Calculate RMSE
-    mse = calculate_filtered_mse(actual_img.detach().cpu().numpy(), predicted_img.detach().cpu().numpy())
-    rmse = np.sqrt(mse)
-        
-
-        # Flatten the images to 1D arrays for comparison
     actual_flat = actual_img.flatten()
     predicted_flat = predicted_img.flatten()
-        
-        # Categorize pixel values
-        # actual_categorized = np.array([categorize_pixel(value, thresholds, categories) for value in actual_flat])
-        # predicted_categorized = np.array([categorize_pixel(value, thresholds, categories) for value in predicted_flat])
-        
-        # Calculate CSI for each category
-    for category in categories_threshold.keys():
-        csi=calculate_cat_csi(predicted_flat, actual_flat, category)
-        csi_values[category].append(csi)
-        fss = calculate_fss(actual_img, predicted_img, categories_threshold[category][0],
-                        categories_threshold[category][1], neighborhood_size)
-        fss_values[category].append(fss)
+    mse,csi_values,fss_values=calculate_metrics(actual_img,predicted_img)  
+    rmse = np.sqrt(mse)
         
 print(f"Average RMSE across all images: {rmse}")
 with open(output_file_path, 'w') as file:
+    file.write(f"test on event '../RadarData_test_18/181209/hd1812090945.scu'\n")
     file.write(f"\nAverage RMSE across all images: {rmse}\n")
 
     # Calculate the average CSI for each category across all images

@@ -110,7 +110,7 @@ def train_model(train_dataset,validate_data,test_data,model,file_name,batch_size
     train_dataloader = DataLoader(
         dataset=train_dataset,
         batch_size=batch_size,
-        shuffle=False,
+        shuffle=True,
         # num_workers=8
     )
     # for batch_num, (input, target) in enumerate(tqdm(train_dataloader), 1):
@@ -119,7 +119,7 @@ def train_model(train_dataset,validate_data,test_data,model,file_name,batch_size
     validate_dataloader = DataLoader(
         dataset=validate_data,
         batch_size=25,
-        shuffle=False
+        shuffle=True
     )
     # test_loader = DataLoader(
     #     dataset=test_data,
@@ -284,7 +284,7 @@ def train_model(train_dataset,validate_data,test_data,model,file_name,batch_size
         # Log the learning rate
         current_lr = optim.param_groups[0]['lr']
         writer.add_scalars('Learning Rate', {'learning rate':current_lr}, epoch)
-        writer.flush()
+        
         # Save checkpoint every 2 epochs
         checkpoint_path =f'{model_file_path}/{file_name}_model_checkpoint_{epoch}.pth'
         csi_means = {category: np.nanmean(csi_values[category]) for category in categories_threshold.keys()}
@@ -293,6 +293,7 @@ def train_model(train_dataset,validate_data,test_data,model,file_name,batch_size
         writer.add_scalars(f'CSI values',csi_means,epoch)
         writer.add_scalars(f'FSS values',fss_means,epoch)
         writer.add_scalars(f'MSE values',{'MSE':average_rmse},epoch)
+        writer.flush()
         if epoch % 2 == 0:
             torch.save({
                     'epoch': epoch,

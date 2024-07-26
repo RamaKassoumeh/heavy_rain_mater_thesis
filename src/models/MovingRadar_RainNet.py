@@ -1,3 +1,11 @@
+import sys
+import os
+current = os.path.dirname(os.path.realpath(__file__))
+parent = os.path.dirname(current)
+parparent = os.path.dirname(parent)
+sys.path.append(current)
+sys.path.append(parent)
+sys.path.append(parparent)
 from datetime import datetime
 
 import matplotlib.pyplot as plt
@@ -7,10 +15,11 @@ import torch.nn as nn
 from torch.optim import Adam
 from torch.utils.tensorboard import SummaryWriter
 # from RadarFilterImageDataset import RadarFilterImageDataset
-from RadarFilterRainNet3DDataset import RadarFilterRainNetDataset
+from dataloader.RadarFilterRainNet3DDataset import RadarFilterRainNetDataset
+
+from models.RainNet3D import RainNet
 # from RadarFilterRainNetDataset import RadarFilterRainNetDataset
 
-from RainNet3D import RainNet
 from plotting.plotting import plot_images
 
 from convlstm import Seq2Seq
@@ -26,7 +35,7 @@ import io
 from torchvision import transforms
 import numpy as np
 from sklearn.metrics import confusion_matrix
-from test_metrics import calculate_metrics,categories_threshold
+from tests.test_metrics import calculate_metrics,categories_threshold
 
 # import imageio
 # from ipywidgets import widgets, HBox
@@ -98,19 +107,19 @@ inverseTransform= transforms.Compose([
 ])
 
 train_dataset = RadarFilterRainNetDataset(
-    img_dir='../RadarData_18/',
+    img_dir='/home/gouda/heavyrain/RadarData_18/',
     transform=transform,
     inverse_transform=inverseTransform
 )
 
 validate_data = RadarFilterRainNetDataset(
-    img_dir='../RadarData_validate_18/',
+    img_dir='/home/gouda/heavyrain/RadarData_test_18/',
     transform=transform,
     inverse_transform=inverseTransform
 )
 
 test_data = RadarFilterRainNetDataset(
-    img_dir='../RadarData_test_18/',
+    img_dir='/home/gouda/heavyrain/RadarData_validate_18/',
     transform=transform,
     inverse_transform=inverseTransform
 )
@@ -120,13 +129,13 @@ timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
 train_dataloader = DataLoader(
     dataset=train_dataset,
-    batch_size=1,
+    batch_size=100,
     shuffle=True
 )
 
 validate_loader = DataLoader(
     dataset=validate_data,
-    batch_size=20,
+    batch_size=50,
     shuffle=True
 )
 
@@ -196,7 +205,7 @@ scheduler = torch.optim.lr_scheduler.MultiStepLR(optim, milestones=[10,6,4], gam
 # criterion_moderate_rain = LogCoshThresholdLoss(transform(np.array([[2.5]])),transform(np.array([[7.5]])))
 # # 73.5-200
 # criterion_heavy_rain = LogCoshThresholdLoss(transform(np.array([[7.5]])),transform(np.array([[201]])))
-num_epochs = 10
+num_epochs = 50
 criterion = LogCoshLoss()
 file_name='radar_trainer_30M_RainNet_288_size_log_200_normalize_3d_2018'
 # Initializing in a separate cell, so we can easily add more epochs to the same run
@@ -205,18 +214,17 @@ csi_values = {category: [] for category in categories_threshold.keys()}
 
 # Calculate fss for each category across all images
 fss_values = {category: [] for category in categories_threshold.keys()}
-writer = SummaryWriter(f'runs/{file_name}_{timestamp}')
+writer = SummaryWriter(f'{parparent}/runs/{file_name}_{timestamp}')
 start_epoch=1
-checkpoint_path =f'models/{file_name}_model_checlpoint2.pth'
-# Load the checkpoint if it exists
-if os.path.exists(checkpoint_path):
-    checkpoint = torch.load(checkpoint_path)
-    model.load_state_dict(checkpoint['model_state_dict'])
-    optim.load_state_dict(checkpoint['optimizer_state_dict'])
-    start_epoch = checkpoint['epoch'] + 1
-    print(f"Resumed from checkpoint at epoch {start_epoch}")
+# checkpoint_path =f'models/{file_name}_model_checlpoint2.pth'
+# # Load the checkpoint if it exists
+# if os.path.exists(checkpoint_path):
+#     checkpoint = torch.load(checkpoint_path)
+#     model.load_state_dict(checkpoint['model_state_dict'])
+#     optim.load_state_dict(checkpoint['optimizer_state_dict'])
+#     start_epoch = checkpoint['epoch'] + 1
+#     print(f"Resumed from checkpoint at epoch {start_epoch}")
 
-writer = SummaryWriter(f'runs/{file_name}_{timestamp}')
 
 for epoch in range(1, num_epochs + 1):
 
@@ -258,6 +266,12 @@ for epoch in range(1, num_epochs + 1):
     print(f"the train loss is {train_loss}")
     val_loss = 0
     model.eval()
+    csi_values.clear()
+    fss_values.clear()
+    # Intinalize CSI for each category across all images
+    csi_values = {category: [] for category in categories_threshold.keys()}
+    fss_values = {category: [] for category in categories_threshold.keys()}
+    rmse_values = []
     with torch.no_grad():
         for batch_num, (input, target) in enumerate(validate_loader, 1):
             output = model(input)
@@ -270,6 +284,15 @@ for epoch in range(1, num_epochs + 1):
             # loss=0.1*loss_undefined_rain+0.2*loss_light_rain+0.3*loss_moderate_rain+0.4*loss_heavy_rain
             loss = criterion(output_flatten, target_flatten)
             val_loss += loss.item()
+            actual_img=inverseTransform(target)
+            predicted_img=inverseTransform(output)
+            mse,csi,fss=calculate_metrics(actual_img,predicted_img)
+            rmse = np.sqrt(mse)
+            # Append RMSE to list
+            rmse_values.append(rmse)
+            for category in categories_threshold.keys():
+                csi_values[category].append(csi[category])
+                fss_values[category].append(fss[category])
             if batch_num%100 ==0:
                 target=inverseTransform(target)
                 input=inverseTransform(input)
@@ -288,6 +311,16 @@ for epoch in range(1, num_epochs + 1):
     writer.add_scalars('Training vs. Validation Loss',
                        {'Training': train_loss, 'Validation': val_loss},
                        epoch)
+    # Log the learning rate
+    current_lr = optim.param_groups[0]['lr']
+    writer.add_scalars('Learning Rate', {'learning rate':current_lr}, epoch)
+        
+    csi_means = {category: np.nanmean(csi_values[category]) for category in categories_threshold.keys()}
+    fss_means = {category: np.nanmean(fss_values[category]) for category in categories_threshold.keys()}
+    average_rmse = np.mean(rmse_values)
+    writer.add_scalars(f'CSI values',csi_means,epoch)
+    writer.add_scalars(f'FSS values',fss_means,epoch)
+    writer.add_scalars(f'MSE values',{'MSE':average_rmse},epoch)
     writer.flush()
 
 # Save the model's state dictionary
