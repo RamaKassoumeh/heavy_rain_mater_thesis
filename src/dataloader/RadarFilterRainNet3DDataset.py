@@ -106,6 +106,7 @@ class RadarFilterRainNetDataset(Dataset):
             original_label_image=self.read_radar_image(self.radar_data_array[idx],True)
             # original_label=self.transform(original_label_image)
             original_label = torch.tensor(original_label_image).unsqueeze(0)
+            original_label = original_label.unsqueeze(0)
             original_label=original_label.cuda()
             return batch,label,original_label
         return batch, label

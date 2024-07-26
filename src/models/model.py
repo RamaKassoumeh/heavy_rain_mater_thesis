@@ -60,13 +60,26 @@ def custom_transform2(x):
     # Use PyTorch's where function to apply the transformation element-wise
     return torch.where(x < 0, 0, x)
 
-
 radar_transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Lambda(custom_transform1) ,
     transforms.Lambda(custom_transform2) ,
-     transforms.Lambda(lambda x:  (torch.log(x+1) / torch.log(torch.tensor(max_value+2))).float()),    
+    transforms.Lambda(lambda x:  (torch.log(x+1) / torch.log(torch.tensor(max_value+2))).float()),    
 ])
+
+def custom_undefined_transform(x):
+    mask_undefined = (x < 0)
+    x[mask_undefined] = 0
+    x=(torch.log(x+1) / torch.log(torch.tensor(max_value+1))).float()
+    x[mask_undefined] = -1
+    return x
+
+radar_undefined_transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Lambda(custom_undefined_transform)
+])
+
+
 
 def invert_custom_transform1(x):
     # Use PyTorch's where function to apply the transformation element-wise
@@ -79,6 +92,18 @@ radar_inverseTransform= transforms.Compose([
     # transforms.Lambda(invert_custom_transform2) ,
     transforms.Lambda(invert_custom_transform1) ,
     transforms.Lambda(invert_custom_transform2) ,
+    transforms.Lambda(lambda x: x) 
+])
+
+def inverse_custom_undefined_transform(x):
+    mask_undefined = (x < 0)
+    x[mask_undefined] = 0
+    x= torch.pow(max_value+1, x)-1
+    x[mask_undefined] = -999
+    return x
+
+radar_undefined_inverse_transform = transforms.Compose([
+    transforms.Lambda(inverse_custom_undefined_transform),
     transforms.Lambda(lambda x: x) 
 ])
 
@@ -104,7 +129,7 @@ satellite_inverseTransform = transforms.Compose([
     transforms.Lambda(denormalize_Satellite),
     ])
 
-def train_model(train_dataset,validate_data,test_data,model,file_name,batch_size,run_name=None):
+def train_model(train_dataset,validate_data,model,file_name,inverse_trans,batch_size,run_name=None):
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
     train_dataloader = DataLoader(
@@ -233,9 +258,9 @@ def train_model(train_dataset,validate_data,test_data,model,file_name,batch_size
             optim.step()
             train_loss += loss.item()
             if batch_num%50 ==0:
-                target=radar_inverseTransform(target)
-                input=radar_inverseTransform(input)
-                output=radar_inverseTransform(output)
+                target=inverse_trans(target)
+                input=inverse_trans(input)
+                output=inverse_trans(output)
                 # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',file_name)
                 plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,target[0,0],output[0,0]], 2, 4,epoch,batch_num,'train',file_name)
 
@@ -257,9 +282,9 @@ def train_model(train_dataset,validate_data,test_data,model,file_name,batch_size
                 target_flatten=target.flatten()
                 loss = criterion(output_flatten, target_flatten)
                 val_loss += loss.item()
-                actual_img=radar_inverseTransform(target)
-                predicted_img=radar_inverseTransform(output)
-                mse,csi,fss=calculate_metrics(actual_img,predicted_img)
+                target_img=inverse_trans(target)
+                output_img=inverse_trans(output)
+                mse,csi,fss=calculate_metrics(target_img,output_img)
                 rmse = np.sqrt(mse)
                 # Append RMSE to list
                 rmse_values.append(rmse)
@@ -267,10 +292,8 @@ def train_model(train_dataset,validate_data,test_data,model,file_name,batch_size
                     csi_values[category].append(csi[category])
                     fss_values[category].append(fss[category])
                 if batch_num%50 ==0:
-                    target=radar_inverseTransform(target)
-                    input=radar_inverseTransform(input)
-                    output=radar_inverseTransform(output)
-                    plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,target[0,0],output[0,0]], 2, 4,epoch,batch_num,'validate',file_name)
+                    input=inverse_trans(input)
+                    plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,target_img[0,0],output_img[0,0]], 2, 4,epoch,batch_num,'validate',file_name)
                
         val_loss /= len(validate_dataloader.dataset)
         print(f"the validate loss is {val_loss}")

@@ -1,3 +1,4 @@
+from datetime import datetime
 import glob
 import rasterio
 import numpy as np
@@ -62,8 +63,8 @@ def read_radar_image(indx):
             print(img_path)
             raise e
 
-radar_dir='../RadarData_summer_20'
-radar_data_array=np.load('../RadarData_summer_20/radar_data_array.npy')
+radar_dir='/home/gouda/heavyrain/RadarData_summer_20/'
+radar_data_array=np.load('/home/gouda/heavyrain/RadarData_summer_20/radar_data_array.npy')
 min_values =[]
 max_values =[]
 radar_names = []
@@ -84,8 +85,9 @@ for indx in radar_data_array:
     #     break
     read_radar_image(indx)
 
+timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
-with open("analyse_radar_test.txt", 'w') as file:
+with open(f'analyse_radar_test_{timestamp}.txt', 'w') as file:
     file.write(f"date: {radar_dir}\n")
     file.write(f"undefined_count: {undefined_count}, persentage is {undefined_count/total_count*100}\n")
     file.write(f"liglht_rain_count: {liglht_rain_count}, persentage is {liglht_rain_count/total_count*100}\n")

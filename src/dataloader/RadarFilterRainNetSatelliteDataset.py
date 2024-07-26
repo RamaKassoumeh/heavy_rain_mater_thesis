@@ -81,7 +81,8 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
         self.bands_max_values = data.get("Max values", {})
 
     def __len__(self):
-        return self.radar_data_array.__len__()
+        return 1000
+        # return self.radar_data_array.__len__()
     
 
     def read_radar_image(self,indx,return_original=False):

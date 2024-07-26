@@ -190,7 +190,7 @@ def process_data(radar_data_folder_path):
                     max_value=max(np.max(ds_arr),max_value)
                             
                     file.close()
-                    percentage=(np.count_nonzero(ds_arr>0)/ ds_arr.size) * 100
+                    percentage=(np.count_nonzero(ds_arr>=2.5)/ ds_arr.size) * 100
                     max_precipitation=np.max(ds_arr)
                     max_precipitation_persentage=(np.count_nonzero(ds_arr>max_threshold)/ ds_arr.size) * 100
                     added_to_list=check_conditions(percentage,max_precipitation_persentage,index,radar_file,total_files)

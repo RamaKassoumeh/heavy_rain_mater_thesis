@@ -23,10 +23,11 @@ timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 train_dataset = RadarFilterRainNetSatelliteDataset(
     img_dir='/home/gouda/heavyrain/RadarData_summer_18_19/',
     sat_dir='/home/gouda/heavyrain/SatelliteData_summer_18_19/',
-    transform=model.radar_transform,
-    inverse_transform=model.radar_inverseTransform,
+    transform=model.radar_undefined_transform,
+    inverse_transform=model.radar_undefined_transform,
     sat_transform=model.satellite_transform,
-    random_satellite=False
+    random_satellite=False,
+    return_original=True
 )
 
 
@@ -36,10 +37,11 @@ train_dataloader = DataLoader(
     shuffle=False
 )
 counter=0
-for batch_num, (input_data, target) in enumerate(train_dataloader, 1):
+for batch_num, (input_data, target, original_target) in enumerate(train_dataloader, 1):
     counter+=1
-    input_data[0,:,0]=model.radar_inverseTransform(input_data[0,:,0])
-    input_data[0,:,1:12]=model.satellite_inverseTransform(input_data[0,:,1:12])    
+    inverse_target=model.radar_undefined_inverse_transform(target)
+    assert torch.isclose(original_target,inverse_target).tolist(), "tensor1 and tensor2 are not equal"
+    input_data=model.radar_undefined_inverse_transform(input_data)
     plot_radar_satellite_images(input_data[0,0,],batch_num,'test_satellite',
         'test_visualization',
         save_image=True)

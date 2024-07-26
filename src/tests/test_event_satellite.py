@@ -21,7 +21,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 from dataloader.RadarFilterRainNetSatelliteDataset import RadarFilterRainNetSatelliteDataset
 
-from models.RainNet_Satellite_4_layers import RainNet
+from models.RainNet_Satellite import RainNet
 from plotting.plotting import plot_images
 
 from convlstm import Seq2Seq
@@ -46,7 +46,7 @@ decimal_places = 3
 # Multiply the tensor by 10^decimal_places
 factor = 10 ** decimal_places
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-file_name='radar_trainer_30M_RainNet_Sat_288_size_log_200_normalize_3d_sat'
+file_name='radar_trainer_30M_RainNet_Sat_288_size_log_200_normalize_3d_sat_bigger_model'
 
 model=RainNet()
 model=torch.nn.DataParallel(model)
@@ -66,7 +66,7 @@ min_value=0
 max_value=200
 
 # read data from file
-with open("analyse/analyse_satellite_IQR.txt", 'r') as file:
+with open(f'{parparent}/src/analyse/analyse_satellite_IQR.txt', 'r') as file:
     lines = file.readlines()
 
 data = {}
@@ -235,7 +235,7 @@ def getitem(event_path):
             resized_image=read_radar_image(previous_file_path)
             radar_array.append(resized_image)
             
-            previous_Sattelie_file_name = get_filename_by_prefix(Satellite_dir,f"MSG2-SEVI-MSG15-0100-NA-{five_minutes_before_sat.strftime('%Y%m%d%H%M')}")
+            previous_Sattelie_file_name = get_filename_by_prefix(Satellite_dir,f"MSG3-SEVI-MSG15-0100-NA-{five_minutes_before_sat.strftime('%Y%m%d%H%M')}")
             satellite_image=read_updample_satellite_image(os.path.join(Satellite_dir,previous_Sattelie_file_name))
             satellite_array.append(satellite_image)
 
@@ -289,7 +289,7 @@ neighborhood_size=3
 model.eval()
 
 with torch.no_grad():
-    input, target = getitem('../RadarData_test_18/181209/hd1812090945.scu')
+    input, target = getitem('../RadarData_19/191119/hd1911191010.scu')
     output = model(input)
     actual_img=inverseTransform(target)
     predicted_img=inverseTransform(output)
@@ -303,9 +303,9 @@ with torch.no_grad():
         
 print(f"Average RMSE across all images: {rmse}")
 with open(output_file_path, 'w') as file:
-    file.write(f"test on event '../RadarData_test_18/181209/hd1812090945.scu'\n")
+    file.write(f"test on event '../RadarData_19/191119/hd1911191010.scu'\n")
 
-    file.write(f"\nAverage RMSE across all images: {rmse}\n")
+    file.write(f"\nAverage RMSE across all images: {round(rmse,3)}\n")
 
     # Calculate the average CSI for each category across all images
     average_csi = {category: np.nanmean(csi_values[category]) for category in categories_threshold.keys()}
@@ -315,11 +315,11 @@ with open(output_file_path, 'w') as file:
     # Display the results
     print("Average CSI for each category across all images:")
     for category, avg_csi in average_csi.items():
-        print(f"{category}: {avg_csi}")
-        file.write(f"\nAverage CSI for category: {category}: {avg_csi}\n")
+        print(f"{category}: {round(avg_csi,3)}")
+        file.write(f"\nAverage CSI for category: {category}: {round(avg_csi,3)}\n")
     # Display the results
     print("Average FSS for each category across all images:")
     for category, avg_fss in average_fss.items():
-        print(f"{category}: {avg_fss}")
-        file.write(f"\nAverage FSS for category: {category}: {avg_fss}\n")
+        print(f"{category}: {round(avg_fss,3)}")
+        file.write(f"\nAverage FSS for category: {category}: {round(avg_fss,3)}\n")
     file.close()

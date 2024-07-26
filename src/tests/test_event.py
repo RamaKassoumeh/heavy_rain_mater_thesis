@@ -214,7 +214,7 @@ neighborhood_size=3
 model.eval()
 
 with torch.no_grad():
-    input, target = getitem('../RadarData_test_18/181209/hd1812090945.scu')
+    input, target = getitem('../RadarData_19/191119/hd1911191010.scu')
     output = model(input)
     actual_img=inverseTransform(target)
     predicted_img=inverseTransform(output)
@@ -227,8 +227,8 @@ with torch.no_grad():
         
 print(f"Average RMSE across all images: {rmse}")
 with open(output_file_path, 'w') as file:
-    file.write(f"test on event '../RadarData_test_18/181209/hd1812090945.scu'\n")
-    file.write(f"\nAverage RMSE across all images: {rmse}\n")
+    file.write(f"test on event '../RadarData_19/191119/hd1911191010.scu'\n")
+    file.write(f"\nAverage RMSE across all images: {round(rmse,3)}\n")
 
     # Calculate the average CSI for each category across all images
     average_csi = {category: np.nanmean(csi_values[category]) for category in categories_threshold.keys()}
@@ -238,11 +238,11 @@ with open(output_file_path, 'w') as file:
     # Display the results
     print("Average CSI for each category across all images:")
     for category, avg_csi in average_csi.items():
-        print(f"{category}: {avg_csi}")
-        file.write(f"\nAverage CSI for category: {category}: {avg_csi}\n")
+        print(f"{category}: {round(avg_csi,3)}")
+        file.write(f"\nAverage CSI for category: {category}: {round(avg_csi,3)}\n")
     # Display the results
     print("Average FSS for each category across all images:")
     for category, avg_fss in average_fss.items():
-        print(f"{category}: {avg_fss}")
-        file.write(f"\nAverage FSS for category: {category}: {avg_fss}\n")
+        print(f"{category}: {round(avg_fss,3)}")
+        file.write(f"\nAverage FSS for category: {category}: {round(avg_fss,3)}\n")
     file.close()
