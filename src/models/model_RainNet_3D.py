@@ -11,28 +11,30 @@ from dataloader.RadarFilterRainNet3DDataset import RadarFilterRainNetDataset
 
 from models.RainNet3D import RainNet
 
-import model
+import model_RainNet
 
+radar_transform=model_RainNet.radar_transform
+radar_inverse_transform=model_RainNet.radar_inverseTransform
 
 train_dataset = RadarFilterRainNetDataset(
-    img_dir='/raid/heavyrain_dataset/RadarData_summer_18_19/',
-    transform=model.radar_undefined_transform,
-    inverse_transform=model.radar_undefined_inverse_transform
+    img_dir='/raid/heavyrain_dataset/RadarData_summer_18_19_fewer_light_rain/',
+    transform=radar_transform,
+    inverse_transform=radar_inverse_transform
 )
 
 validate_data = RadarFilterRainNetDataset(
-    img_dir='/raid/heavyrain_dataset/RadarData_summer_20/',
-    transform=model.radar_undefined_transform,
-    inverse_transform=model.radar_undefined_inverse_transform
+    img_dir='/raid/heavyrain_dataset/RadarData_summer_20_fewer_light_rain/',
+    transform=radar_transform,
+    inverse_transform=radar_inverse_transform
 )
 
 # test_data = RadarFilterRainNetDataset(
 #     img_dir='/home/gouda/heavyrain/RadarData_summer_20/',
 #     transform=model.radar_undefined_transform,
-#     inverse_transform=model.radar_undefined_inverse_transform
+#     inverse_transform=radar_inverse_transform
 # )
 
 
 modelRainnet=RainNet()
-file_name='radar_trainer_30M_RainNet_3d_Log_summer_normalized_undefined'
-model.train_model(train_dataset,validate_data,modelRainnet,file_name,model.radar_undefined_inverse_transform,batch_size=100)
+file_name='radar_trainer_30M_RainNet_3d_Log_summer_fewer_light_rain'
+model_RainNet.train_model(train_dataset,validate_data,modelRainnet,file_name,radar_inverse_transform,batch_size=300)

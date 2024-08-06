@@ -115,11 +115,11 @@ def check_conditions(event_persentage,event_max_precipitation,current_event_no,r
             return True
     return False
 
-# train_data = '/raid/heavyrain_dataset/RadarData_18/'
+train_data = '/home/gouda/heavyrain/RadarData_summer_21/'
 # validate_data = '/raid/heavyrain_dataset/RadarData_validate_18/'
-test_data = '/home/gouda/heavyrain/RadarData_summer_20/'
+test_data = '/home/gouda/heavyrain/RadarData_summer_21/'
 
-satellite_data='/home/gouda/heavyrain/SatelliteData_summer_20/'
+satellite_data='/home/gouda/heavyrain/SatelliteData_summer_21/'
 min_value=0
 max_value=0
 
@@ -178,12 +178,12 @@ def process_data(radar_data_folder_path):
                     gain_rate=dataset_DXk.get('what').attrs["gain"]
                     ds_arr = dataset_DXk.get('image')[:]  # the image data in an array of floats
                     ds_arr = np.where(ds_arr >0, ds_arr * gain_rate, ds_arr)
-
+                   
                     if np.max(ds_arr)>200:
                         index+=1
                         file.close()
                         continue
-                    ds_arr=ds_arr[110:360,110:390]
+                    ds_arr = ds_arr[137:436, 58:357]
                     ds_arr = np.where(ds_arr == -999, 0, ds_arr)
                     # ds_arr = np.where(ds_arr > 100, 100, ds_arr)
                     min_value=min(np.min(ds_arr),min_value)
@@ -238,15 +238,15 @@ def process_data(radar_data_folder_path):
 #     max_precipitation=np.max(ds_arr)
 #     check_conditions(percentage,max_precipitation,1,"../RadarData/230825/hd2308250320.scu",300)
 
-# process_data(train_data)
-# total_sum=0
-# total_sum_square=0
-# count=0
+process_data(train_data)
+total_sum=0
+total_sum_square=0
+count=0
 # process_data(validate_data)
 total_sum=0
 total_sum_square=0
 count=0
-process_data(test_data)
+# process_data(test_data)
 print(min_value)
 print(max_value)
 

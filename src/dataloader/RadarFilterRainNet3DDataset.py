@@ -39,8 +39,8 @@ class RadarFilterRainNetDataset(Dataset):
         self.radar_data_array=np.load(img_dir+'/radar_data_array.npy')
 
     def __len__(self):
-        return 1000
-        # return self.radar_data_array.__len__()
+        # return 1000
+        return self.radar_data_array.__len__()
 
     def read_radar_image(self,indx,return_original=False):
         try:

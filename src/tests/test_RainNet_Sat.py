@@ -11,18 +11,20 @@ from models.RainNet_Satellite import RainNet
 from dataloader.RadarFilterRainNetSatelliteDataset import RadarFilterRainNetSatelliteDataset
 
 import test_metrics
+import models.model_RainNet as model_RainNet
 
-test_file_name='/raid/heavyrain_dataset/RadarData_summer_20/'
+radar_inverse_transform=model_RainNet.radar_inverseTransform
+test_file_name='/raid/heavyrain_dataset/RadarData_summer_21/'
 
 test_data = RadarFilterRainNetSatelliteDataset(
     img_dir=test_file_name,
-    sat_dir='/raid/heavyrain_dataset/SatelliteData_summer_20',
-    transform=test_metrics.radar_transform,
-    inverse_transform=test_metrics.radar_inverseTransform,
-    sat_transform=test_metrics.satellite_transform,
+    sat_dir='/raid/heavyrain_dataset/SatelliteData_summer_21',
+    transform=model_RainNet.radar_transform,
+    inverse_transform=radar_inverse_transform,
+    sat_transform=model_RainNet.satellite_transform,
     random_satellite=False
 )
-file_name='radar_trainer_30M_RainNet_Sat_288_size_log_200_normalize_3d_sat_bigger_model'
+file_name='radar_trainer_30M_RainNet_3d_Sat_summer_model_checkpoint_41'
 
 model=RainNet()
-test_metrics.test_phase(file_name,model,test_data,test_file_name,batch_size=10)
+test_metrics.test_phase(file_name,model,test_data,test_file_name,radar_inverse_transform,batch_size=20)

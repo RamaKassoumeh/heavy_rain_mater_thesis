@@ -257,7 +257,7 @@ def train_model(train_dataset,validate_data,model,file_name,inverse_trans,batch_
             # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optim.step()
             train_loss += loss.item()
-            if batch_num%50 ==0:
+            if batch_num%100 ==0:
                 target=inverse_trans(target)
                 input=inverse_trans(input)
                 output=inverse_trans(output)
@@ -291,7 +291,7 @@ def train_model(train_dataset,validate_data,model,file_name,inverse_trans,batch_
                 for category in categories_threshold.keys():
                     csi_values[category].append(csi[category])
                     fss_values[category].append(fss[category])
-                if batch_num%50 ==0:
+                if batch_num%100 ==0:
                     input=inverse_trans(input)
                     plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,target_img[0,0],output_img[0,0]], 2, 4,epoch,batch_num,'validate',file_name)
                
@@ -308,7 +308,6 @@ def train_model(train_dataset,validate_data,model,file_name,inverse_trans,batch_
         current_lr = optim.param_groups[0]['lr']
         writer.add_scalars('Learning Rate', {'learning rate':current_lr}, epoch)
         
-        # Save checkpoint every 2 epochs
         checkpoint_path =f'{model_file_path}/{file_name}_model_checkpoint_{epoch}.pth'
         csi_means = {category: np.nanmean(csi_values[category]) for category in categories_threshold.keys()}
         fss_means = {category: np.nanmean(fss_values[category]) for category in categories_threshold.keys()}
@@ -317,14 +316,13 @@ def train_model(train_dataset,validate_data,model,file_name,inverse_trans,batch_
         writer.add_scalars(f'FSS values',fss_means,epoch)
         writer.add_scalars(f'MSE values',{'MSE':average_rmse},epoch)
         writer.flush()
-        if epoch % 2 == 0:
-            torch.save({
+        torch.save({
                     'epoch': epoch,
                     'run_name': run_name,
                     'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optim.state_dict(),
                 }, checkpoint_path)
-            print(f'Checkpoint saved at epoch {epoch}')
+        print(f'Checkpoint saved at epoch {epoch}')
         scheduler_decrease.step()
 
     # Save the model's state dictionary

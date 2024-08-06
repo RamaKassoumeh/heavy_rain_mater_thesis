@@ -63,8 +63,8 @@ def read_radar_image(indx):
             print(img_path)
             raise e
 
-radar_dir='/home/gouda/heavyrain/RadarData_summer_20/'
-radar_data_array=np.load('/home/gouda/heavyrain/RadarData_summer_20/radar_data_array.npy')
+radar_dir='/home/gouda/heavyrain/RadarData_summer_21/'
+radar_data_array=np.load('/home/gouda/heavyrain/RadarData_summer_21/radar_data_array.npy')
 min_values =[]
 max_values =[]
 radar_names = []

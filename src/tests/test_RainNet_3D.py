@@ -10,18 +10,18 @@ sys.path.append(parparent)
 from dataloader.RadarFilterRainNet3DDataset import RadarFilterRainNetDataset
 
 from models.RainNet3D import RainNet
-
+import models.model_RainNet as model_RainNet
 
 import test_metrics
-
-test_file_name='/raid/heavyrain_dataset/RadarData_summer_20/'
+radar_inverse_transform=model_RainNet.radar_inverseTransform
+test_file_name='/raid/heavyrain_dataset/RadarData_summer_21/'
 test_data = RadarFilterRainNetDataset(
     img_dir=test_file_name,
-    transform=test_metrics.radar_transform,
-    inverse_transform=test_metrics.radar_inverseTransform
+    transform=model_RainNet.radar_transform,
+    inverse_transform=radar_inverse_transform
 )
 
-file_name='radar_trainer_30M_RainNet_288_size_log_200_normalize_3d_2018'
+file_name='radar_trainer_30M_RainNet_3d_Log_summer_model_checkpoint_34'
 
 model=RainNet()
-test_metrics.test_phase(file_name,model,test_data,test_file_name,batch_size=200)
+test_metrics.test_phase(file_name,model,test_data,test_file_name,radar_inverse_transform,batch_size=200)

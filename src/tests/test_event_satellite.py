@@ -22,6 +22,7 @@ from tqdm import tqdm
 from dataloader.RadarFilterRainNetSatelliteDataset import RadarFilterRainNetSatelliteDataset
 
 from models.RainNet_Satellite import RainNet
+from models import model_RainNet
 from plotting.plotting import plot_images
 
 from convlstm import Seq2Seq
@@ -46,12 +47,15 @@ decimal_places = 3
 # Multiply the tensor by 10^decimal_places
 factor = 10 ** decimal_places
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-file_name='radar_trainer_30M_RainNet_Sat_288_size_log_200_normalize_3d_sat_bigger_model'
+file_name='radar_trainer_30M_RainNet_3d_Sat_summer_model_checkpoint_41'
 
 model=RainNet()
 model=torch.nn.DataParallel(model)
 model.cuda()
-model.load_state_dict(torch.load(f'{parparent}/models_file/{file_name}_model.pth'), strict=False)
+checkpoint_path=f'{parparent}/models_file/{file_name}.pth'
+checkpoint = torch.load(checkpoint_path)
+model.load_state_dict(checkpoint['model_state_dict'], strict=False)
+# model.load_state_dict(torch.load(f'{parparent}/models_file/{file_name}_model.pth'), strict=False)
 
 # from ipywidgets import widgets, HBox
 radar_data_folder_path = '../RadarData_test_18/'
@@ -60,98 +64,15 @@ Satellite_dir='../SatelliteData/'
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 print(device)
-# Load Data as Numpy Array
-# MovingMNIST = np.load('mnist_test_seq.npy').transpose(1, 0, 2, 3)
-min_value=0
-max_value=200
-
-# read data from file
-with open(f'{parparent}/src/analyse/analyse_satellite_IQR.txt', 'r') as file:
-    lines = file.readlines()
-
-data = {}
-for line in lines:
-    key, value = line.split(':', 1)
-    key = key.strip()
-    value = value.strip()
-    value = value.replace('array', '')  # Remove 'array' to make it a valid dictionary
-    data[key] = ast.literal_eval(value)
-
-
-def custom_transform1(x):
-    # Use PyTorch's where function to apply the transformation element-wise
-    return torch.where(x >= 0, x + 1, x)
-def custom_transform2(x):
-    # Use PyTorch's where function to apply the transformation element-wise
-    return torch.where(x < 0, 0, x)
-
-
-transform = transforms.Compose([
-    transforms.ToTensor(),
-    # transforms.Lambda(lambda x: x.unsqueeze(0))  ,# Add a new dimension at position 0
-    # transforms.Lambda(lambda x: x.cuda()) , # send data to cuda
-    # transforms.Normalize(mean=[mean,],
-    #                          std=[std,],)
-    # transforms.Lambda(lambda x: (x-min_value)/(max_value-min_value)),
-    # transforms.Lambda(lambda x: torch.log2(x+1))
-    transforms.Lambda(custom_transform1) ,
-    transforms.Lambda(custom_transform2) ,
-    # transforms.Lambda(lambda x: torch.log(x+1)),
-     transforms.Lambda(lambda x:  (torch.log(x+1) / torch.log(torch.tensor(max_value+1))).float()),
-    # transforms.Lambda(lambda x: x.float())
-    
-])
-
 
 resampling_method='lanczos'
 target_width=288
 target_height=288
-bands_min_values = data.get("Min values", {})
-bands_max_values = data.get("Max values", {})
-def invert_custom_transform1(x):
-    # Use PyTorch's where function to apply the transformation element-wise
-    return torch.where(x > -0.1, x-1, x)
-def invert_custom_transform2(x):
-    # Use PyTorch's where function to apply the transformation element-wise
-    return torch.where(x <= -0.1, -999, x) 
 
-inverseTransform= transforms.Compose([
-    # transforms.Lambda(lambda x: x.unsqueeze(0))  ,# Add a new dimension at position 0
-    # transforms.Lambda(lambda x: x.cuda()) , # send data to cuda
-    # transforms.Normalize(mean=[-mean/std,],
-                            #  std=[1/std,])
-    # transforms.Lambda(lambda x: torch.exp(x)-1),
-    transforms.Lambda(lambda x: torch.pow(max_value+1, x)-1),
-    transforms.Lambda(invert_custom_transform2) ,
-    transforms.Lambda(invert_custom_transform1) ,
-    transforms.Lambda(invert_custom_transform2) ,
-    # transforms.Lambda(lambda x: (x*(max_value - min_value))+min_value)
-    transforms.Lambda(lambda x: x) 
-])
+transform=model_RainNet.radar_transform
+inverseTransform=model_RainNet.radar_inverseTransform
+sat_transform=model_RainNet.satellite_transform
 
-def normalize_Satellite(x):
-    for i in range(x.size(0)):
-        key=list(bands_min_values.keys())[i]
-        x[i] = (x[i]-bands_min_values[key])/(bands_max_values[key]-bands_min_values[key])
-    return x
-
-sat_transform = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Lambda(normalize_Satellite),
-    ])
-
-
-test_data = RadarFilterRainNetSatelliteDataset(
-    img_dir='../RadarData_test_18/',
-    sat_dir=Satellite_dir,
-    transform=transform,
-    inverse_transform=inverseTransform
-)
-test_loader = DataLoader(
-    dataset=test_data,
-    batch_size=200,
-    shuffle=False
-)
 def read_radar_image(event_path):
         try:
             img_path =  event_path
@@ -287,9 +208,9 @@ output_file_path = f'{parparent}/results/{file_name}_test_results_{timestamp}.tx
 spatial_errors = []
 neighborhood_size=3
 model.eval()
-
+test_file_name='../RadarData_summer_20/200501/hd2005011045.scu'
 with torch.no_grad():
-    input, target = getitem('../RadarData_19/191119/hd1911191010.scu')
+    input, target = getitem(test_file_name)
     output = model(input)
     actual_img=inverseTransform(target)
     predicted_img=inverseTransform(output)
@@ -303,7 +224,7 @@ with torch.no_grad():
         
 print(f"Average RMSE across all images: {rmse}")
 with open(output_file_path, 'w') as file:
-    file.write(f"test on event '../RadarData_19/191119/hd1911191010.scu'\n")
+    file.write(f"test on event {test_file_name}\n")
 
     file.write(f"\nAverage RMSE across all images: {round(rmse,3)}\n")
 

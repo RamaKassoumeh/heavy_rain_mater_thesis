@@ -42,20 +42,20 @@ bands_max_values = data.get("Max values", {})
 outliers_count_percentage_values = data.get("outliers count percentage values", {})
 
 
-def custom_transform1(x):
-    # Use PyTorch's where function to apply the transformation element-wise
-    return torch.where(x >= 0, x + 1, x)
-def custom_transform2(x):
-    # Use PyTorch's where function to apply the transformation element-wise
-    return torch.where(x < 0, 0, x)
+# def custom_transform1(x):
+#     # Use PyTorch's where function to apply the transformation element-wise
+#     return torch.where(x >= 0, x + 1, x)
+# def custom_transform2(x):
+#     # Use PyTorch's where function to apply the transformation element-wise
+#     return torch.where(x < 0, 0, x)
 
 
-radar_transform = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Lambda(custom_transform1) ,
-    transforms.Lambda(custom_transform2) ,
-     transforms.Lambda(lambda x:  (torch.log(x+1) / torch.log(torch.tensor(max_value+2))).float()),    
-])
+# radar_transform = transforms.Compose([
+#     transforms.ToTensor(),
+#     transforms.Lambda(custom_transform1) ,
+#     transforms.Lambda(custom_transform2) ,
+#      transforms.Lambda(lambda x:  (torch.log(x+1) / torch.log(torch.tensor(max_value+2))).float()),    
+# ])
 
 # def invert_custom_transform1(x):
 #     # Use PyTorch's where function to apply the transformation element-wise
@@ -63,19 +63,19 @@ radar_transform = transforms.Compose([
 # def invert_custom_transform2(x):
 #     # Use PyTorch's where function to apply the transformation element-wise
 #     return torch.where(x < 0, -999, x) 
-def invert_custom_transform1(x):
-    # Use PyTorch's where function to apply the transformation element-wise
-    return torch.where(x >= 0, x-1, x)
-def invert_custom_transform2(x):
-    # Use PyTorch's where function to apply the transformation element-wise
-    return torch.where(x < 0, -999, x) 
-radar_inverseTransform= transforms.Compose([
-    transforms.Lambda(lambda x: torch.pow(max_value+2, x)-1),
-    # transforms.Lambda(invert_custom_transform2) ,
-    transforms.Lambda(invert_custom_transform1) ,
-    transforms.Lambda(invert_custom_transform2) ,
-    transforms.Lambda(lambda x: x) 
-])
+# def invert_custom_transform1(x):
+#     # Use PyTorch's where function to apply the transformation element-wise
+#     return torch.where(x >= 0, x-1, x)
+# def invert_custom_transform2(x):
+#     # Use PyTorch's where function to apply the transformation element-wise
+#     return torch.where(x < 0, -999, x) 
+# radar_inverseTransform= transforms.Compose([
+#     transforms.Lambda(lambda x: torch.pow(max_value+2, x)-1),
+#     # transforms.Lambda(invert_custom_transform2) ,
+#     transforms.Lambda(invert_custom_transform1) ,
+#     transforms.Lambda(invert_custom_transform2) ,
+#     transforms.Lambda(lambda x: x) 
+# ])
 
 def normalize_Satellite(x):
     for i in range(x.size(0)):
@@ -251,8 +251,22 @@ def filter_negative_values(y_true, y_pred):
     
     return y_true_filtered, y_pred_filtered
 
+def filter_infinity_values(y_true, y_pred):
+    # Flatten the arrays to 1D
+    y_true_flat = y_true.flatten()
+    y_pred_flat = y_pred.flatten()
+    
+    # Create a mask for values >= 0 in both actual and predicted
+    mask = np.logical_and(np.isfinite(y_true_flat), np.isfinite(y_pred_flat))    
+    # Apply the mask to filter out negative values
+    y_true_filtered = y_true_flat[mask]
+    y_pred_filtered = y_pred_flat[mask]
+    
+    return y_true_filtered, y_pred_filtered
+
 def calculate_filtered_mse(y_true, y_pred):
     y_true_filtered, y_pred_filtered = filter_negative_values(y_true, y_pred)
+    y_true_filtered, y_pred_filtered = filter_infinity_values(y_true_filtered, y_pred_filtered)
     mse = mean_squared_error(y_true_filtered, y_pred_filtered)
     # mae= mean_absolute_error(y_true_filtered, y_pred_filtered)
     return mse
@@ -284,7 +298,7 @@ csi_values_array = {category: [] for category in categories_threshold.keys()}
 fss_values_array = {category: [] for category in categories_threshold.keys()}
 
 
-def test_phase(file_name,model,test_data,test_file_name,batch_size):
+def test_phase(file_name,model,test_data,test_file_name,inverse_trans,batch_size):
     test_loader = DataLoader(
             dataset=test_data,
             batch_size=batch_size,
@@ -292,9 +306,10 @@ def test_phase(file_name,model,test_data,test_file_name,batch_size):
     )
     model=torch.nn.DataParallel(model)
     model.cuda()
-    model.load_state_dict(torch.load(f"{parparent}/models_file/{file_name}_model.pth"), strict=False)
-    # Use GPU if available
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # model.load_state_dict(torch.load(f"{parparent}/models_file/{file_name}_model.pth"), strict=False)
+    checkpoint_path=f'{parparent}/models_file/{file_name}.pth'
+    checkpoint = torch.load(checkpoint_path)
+    model.load_state_dict(checkpoint['model_state_dict'], strict=False)
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
     output_file_path = f'{parparent}/results/{file_name}_test_results_{timestamp}.txt'  # Specify the file path where you want to save the resultsspatial_errors = []
@@ -302,10 +317,10 @@ def test_phase(file_name,model,test_data,test_file_name,batch_size):
     with torch.no_grad():
         for batch_num, (input, target) in enumerate(tqdm(test_loader), 1):
             output = model(input)
-            actual_img=radar_inverseTransform(target)
-            predicted_img=radar_inverseTransform(output)
+            actual_img=inverse_trans(target)
+            predicted_img=inverse_trans(output)
             if batch_num%10 ==0:
-                input=radar_inverseTransform(input)
+                input=inverse_trans(input)
                 # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',folder_name)
                 plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,actual_img[0,0],predicted_img[0,0]], 2, 4,1,batch_num,'test',file_name)
             mse,csi,fss=calculate_metrics(actual_img,predicted_img)
