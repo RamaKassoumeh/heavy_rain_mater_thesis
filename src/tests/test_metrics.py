@@ -304,6 +304,8 @@ def test_phase(file_name,model,test_data,test_file_name,inverse_trans,batch_size
             batch_size=batch_size,
             shuffle=False
     )
+    # for batch_num, (input, target) in enumerate(tqdm(test_loader), 1):
+    #     continue
     model=torch.nn.DataParallel(model)
     model.cuda()
     # model.load_state_dict(torch.load(f"{parparent}/models_file/{file_name}_model.pth"), strict=False)
@@ -319,7 +321,7 @@ def test_phase(file_name,model,test_data,test_file_name,inverse_trans,batch_size
             output = model(input)
             actual_img=inverse_trans(target)
             predicted_img=inverse_trans(output)
-            if batch_num%10 ==0:
+            if batch_num%1000 ==0:
                 input=inverse_trans(input)
                 # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',folder_name)
                 plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,actual_img[0,0],predicted_img[0,0]], 2, 4,1,batch_num,'test',file_name)

@@ -184,8 +184,8 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
             else:
                 satellite_image=self.read_updample_satellite_image(self.satellite_data_array[idx]-i)
             satellite_array.append(satellite_image)
-            print(f"{idx}:radar:{self.img_names[self.radar_data_array[idx]-i][-14:-4]}")
-            print(f"{idx}:satellite:{self.satellite_names[self.satellite_data_array[idx]-i][-30:-20]}")
+            # print(f"{idx}:radar:{self.img_names[self.radar_data_array[idx]-i][-14:-4]}")
+            # print(f"{idx}:satellite:{self.satellite_names[self.satellite_data_array[idx]-i][-30:-20]}")
             assert int(self.img_names[self.radar_data_array[idx]-i][-14:-4])  >=  int(self.satellite_names[self.satellite_data_array[idx]-i][-30:-20])-8 and int(self.img_names[self.radar_data_array[idx]-i][-14:-4])  <=  int(self.satellite_names[self.satellite_data_array[idx]-i][-30:-20])
 
         label_image=self.read_radar_image(self.radar_data_array[idx])
