@@ -110,7 +110,8 @@ def calculate_cat_csi(predicted, actual, category):
         # In case the confusion matrix is not 2x2, handle appropriately
         csi  = 0 
     # Calculate CSI
-    return csi
+    # return csi
+    return tp, fp, fn,csi
 
 def check_spetial_residual(actual_img,predicted_img):
     return (actual_img - predicted_img) ** 2
@@ -229,13 +230,14 @@ def calculate_fss(observed, forecasted, lower_threshold, upper_threshold, neighb
     numerator = np.sum((forecasted_fractional_coverage - observed_fractional_coverage) ** 2)
     denominator = np.sum(forecasted_fractional_coverage ** 2 + observed_fractional_coverage ** 2)
     if numerator==denominator ==0:
-        return np.nan
+       fss=np.nan
     elif denominator==0:
-        return np.nan
+         fss=np.nan
     # Calculate FSS
-    fss = 1 - (numerator / denominator)
+    else:
+        fss = 1 - (numerator / denominator)
 
-    return fss
+    return numerator, denominator,fss
 
 def filter_negative_values(y_true, y_pred):
     # Flatten the arrays to 1D
@@ -277,6 +279,11 @@ csi_values = {category: [] for category in categories_threshold.keys()}
 
 # Calculate fss for each category across all images
 fss_values = {category: [] for category in categories_threshold.keys()}
+tp_values = {category: [] for category in categories_threshold.keys()}
+fp_values = {category: [] for category in categories_threshold.keys()}
+fn_values = {category: [] for category in categories_threshold.keys()}
+observed_fractional_coverage_values = {category: [] for category in categories_threshold.keys()}
+forecasted_fractional_coverage_values = {category: [] for category in categories_threshold.keys()}
 neighborhood_size=3
 
 def calculate_metrics(actual_img,predicted_img):
@@ -285,18 +292,32 @@ def calculate_metrics(actual_img,predicted_img):
      # Calculate CSI for each category
     for category in categories_threshold.keys():
         # csi = calculate_csi(predicted_categorized, actual_categorized, category)
-        csi_values[category]=calculate_cat_csi(actual_img.flatten(), predicted_img.flatten(), category)
-        fss_values[category]=calculate_fss(actual_img, predicted_img, categories_threshold[category][0],
+        tp_values[category],fp_values[category],fn_values[category],csi_values[category]=calculate_cat_csi(actual_img.flatten(), predicted_img.flatten(), category)
+        observed_fractional_coverage_values[category], forecasted_fractional_coverage_values[category],fss_values[category]=calculate_fss(actual_img, predicted_img, categories_threshold[category][0],
                         categories_threshold[category][1], neighborhood_size)
-    return mse,csi_values,fss_values
+    return mse, tp_values, fp_values, fn_values, observed_fractional_coverage_values, forecasted_fractional_coverage_values
 
 # Initilaize RMSE for each image
+def calculate_metrics_one_value(actual_img,predicted_img):
+    mse = calculate_filtered_mse(actual_img.detach().cpu().numpy(), predicted_img.detach().cpu().numpy())
+    # mse=1
+     # Calculate CSI for each category
+    for category in categories_threshold.keys():
+        # csi = calculate_csi(predicted_categorized, actual_categorized, category)
+        tp_values[category],fp_values[category],fn_values[category],csi_values[category]=calculate_cat_csi(actual_img.flatten(), predicted_img.flatten(), category)
+        observed_fractional_coverage_values[category], forecasted_fractional_coverage_values[category],fss_values[category]=calculate_fss(actual_img, predicted_img, categories_threshold[category][0],
+                        categories_threshold[category][1], neighborhood_size)
+
+    return mse, csi_values,fss_values
 
 csi_values_array = {category: [] for category in categories_threshold.keys()}
-
+tp_values_array = {category: [] for category in categories_threshold.keys()}
+fp_values_array = {category: [] for category in categories_threshold.keys()}
+fn_values_array = {category: [] for category in categories_threshold.keys()}
 # Calculate fss for each category across all images
 fss_values_array = {category: [] for category in categories_threshold.keys()}
-
+numerator_values_array = {category: [] for category in categories_threshold.keys()}
+denominator_values_array = {category: [] for category in categories_threshold.keys()}
 
 def test_phase(file_name,model,test_data,test_file_name,inverse_trans,batch_size):
     test_loader = DataLoader(
@@ -321,15 +342,20 @@ def test_phase(file_name,model,test_data,test_file_name,inverse_trans,batch_size
             output = model(input)
             actual_img=inverse_trans(target)
             predicted_img=inverse_trans(output)
-            if batch_num%1000 ==0:
+            if batch_num%10 ==0:
                 input=inverse_trans(input)
                 # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',folder_name)
                 plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,actual_img[0,0],predicted_img[0,0]], 2, 4,1,batch_num,'test',file_name)
-            mse,csi,fss=calculate_metrics(actual_img,predicted_img)
+            mse,tp_values, fp_values, fn_values,numerator,denominator=calculate_metrics(actual_img,predicted_img)
             rmse = np.sqrt(mse)
             for category in categories_threshold.keys():
-                csi_values_array[category].append(csi[category])
-                fss_values_array[category].append(fss[category])
+                # csi_values_array[category].append(csi[category])
+                tp_values_array[category].append(tp_values[category])
+                fp_values_array[category].append(fp_values[category])
+                fn_values_array[category].append(fn_values[category])
+                # fss_values_array[category].append(fss[category])
+                numerator_values_array[category].append(numerator[category])
+                denominator_values_array[category].append(denominator[category])
             # # Append RMSE to list
             rmse_values.append(rmse)
 
@@ -342,8 +368,11 @@ def test_phase(file_name,model,test_data,test_file_name,inverse_trans,batch_size
         file.write(f"test on file {test_file_name}\n")
         
         file.write(f"\nAverage RMSE across all images: {round(average_rmse,3)}\n")
-        average_csi = {category: np.nanmean(csi_values_array[category]) for category in categories_threshold.keys()}
-        average_fss = {category: np.nanmean(fss_values_array[category]) for category in categories_threshold.keys()}
+        # average_csi = {category: np.nanmean(csi_values_array[category]) for category in categories_threshold.keys()}
+        average_csi = {category: np.sum(tp_values_array[category])/np.sum(tp_values_array[category]+fp_values_array[category]+ fn_values_array[category]) for category in categories_threshold.keys()}
+        # average_fss = {category: np.nanmean(fss_values_array[category]) for category in categories_threshold.keys()}
+        average_fss = {category: 1- (np.sum(numerator_values_array[category])/np.sum(denominator_values_array[category])) for category in categories_threshold.keys()}
+        
 
         # Display the results
         print("Average CSI for each category across all images:")

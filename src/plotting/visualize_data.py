@@ -9,10 +9,10 @@ sys.path.append(parparent)
 from datetime import datetime
 
 import torch
-from dataloader.RadarFilterRainNetSatelliteDataset import RadarFilterRainNetSatelliteDataset
+from dataloader.RadarFilterRainNetSatellite15MinDataset import RadarFilterRainNetSatelliteDataset
 # from RadarFilterRainNetSatelliteDataset import RadarFilterRainNetSatelliteDataset
-import model_RainNet as model_RainNet
-from plotting import plot_images,plot_image
+import models.model_RainNet as model_RainNet
+from plotting import plot_images
 from torch.utils.data import DataLoader
 import numpy as np
 import os
@@ -41,6 +41,6 @@ for batch_num, (input, target, original_target) in enumerate(train_dataloader, 1
     inverse_target=model_RainNet.radar_inverseTransform(target)
     assert torch.isclose(original_target,inverse_target).tolist(), "tensor1 and tensor2 are not equal"
     input=model_RainNet.radar_inverseTransform(input)
-    plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4] ,inverse_target[0][0],original_target[0][0]],2, 4,1,batch_num,'test',"test_visualization")
+    plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4] ,inverse_target[0][0],original_target[0][0]],2, 4,1,batch_num,'test',"test_visualization",adance_time=15)
     if counter >=100:
         break

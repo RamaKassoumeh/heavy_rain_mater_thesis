@@ -108,6 +108,17 @@ radar_undefined_inverse_transform = transforms.Compose([
 ])
 
 
+radar_without_undefined_transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Lambda(lambda x:  (torch.log(x+1) / torch.log(torch.tensor(max_value+1))).float()),    
+])
+
+radar_without_undefined_inverse_transform = transforms.Compose([
+    transforms.Lambda(lambda x: torch.pow(max_value+1, x)-1),
+    transforms.Lambda(lambda x: x) 
+])
+
+
 def normalize_Satellite(x):
     for i in range(x.size(0)):
         key=list(bands_min_values.keys())[i]

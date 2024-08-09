@@ -40,7 +40,7 @@ import numpy as np
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
 
-from tests.test_metrics import calculate_metrics,categories_threshold
+from tests.test_metrics import calculate_metrics, calculate_metrics_one_value,categories_threshold
 
 decimal_places = 3
 
@@ -59,7 +59,7 @@ model.load_state_dict(checkpoint['model_state_dict'], strict=False)
 
 # from ipywidgets import widgets, HBox
 radar_data_folder_path = '../RadarData_test_18/'
-Satellite_dir='../SatelliteData/'
+Satellite_dir='../SatelliteData_summer_21/'
 # Use GPU if available
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -208,7 +208,7 @@ output_file_path = f'{parparent}/results/{file_name}_test_results_{timestamp}.tx
 spatial_errors = []
 neighborhood_size=3
 model.eval()
-test_file_name='../RadarData_summer_20/200501/hd2005011045.scu'
+test_file_name='../RadarData_summer_21/210714/hd2107141255.scu'
 with torch.no_grad():
     input, target = getitem(test_file_name)
     output = model(input)
@@ -219,7 +219,7 @@ with torch.no_grad():
         
     actual_flat = actual_img.flatten()
     predicted_flat = predicted_img.flatten()
-    mse,csi_values,fss_values=calculate_metrics(actual_img,predicted_img)  
+    mse,csi_values,fss_values=calculate_metrics_one_value(actual_img,predicted_img)  
     rmse = np.sqrt(mse)
         
 print(f"Average RMSE across all images: {rmse}")

@@ -22,18 +22,18 @@ def check_condition(event_persentage,date,event_max_precipitation,current_event_
     if event_persentage>=threshold or event_max_precipitation>=max_threshold:
         events_above_threshold.append(current_event_no)
         dates_above_threshold.append(date)
-radar_data_folder_path = '../RadarData/'
+radar_data_folder_path = '../RadarData_summer_21/'
 
-with h5py.File("../RadarData/190622/hd1906220520.scu", 'a') as file:
-    a_group_key = list(file.keys())[0]
-    dataset_DXk = file.get(a_group_key)
-    ds_arr = dataset_DXk.get('image')[:]  # the image data in an array of floats
-    ds_arr = np.where(ds_arr == -999, 0, ds_arr)
+# with h5py.File("../RadarData/190622/hd1906220520.scu", 'a') as file:
+#     a_group_key = list(file.keys())[0]
+#     dataset_DXk = file.get(a_group_key)
+#     ds_arr = dataset_DXk.get('image')[:]  # the image data in an array of floats
+#     ds_arr = np.where(ds_arr == -999, 0, ds_arr)
 
-    percentage=(np.count_nonzero(ds_arr)/ ds_arr.size) * 100
-    # check_prev_frames(percentage,datetime_obj,len(percentage_array)-1)
-    percentage_max=(np.count_nonzero(ds_arr>100)/ ds_arr.size) * 100
-    file.close()
+#     percentage=(np.count_nonzero(ds_arr)/ ds_arr.size) * 100
+#     # check_prev_frames(percentage,datetime_obj,len(percentage_array)-1)
+#     percentage_max=(np.count_nonzero(ds_arr>100)/ ds_arr.size) * 100
+#     file.close()
 
 # create arrays
 dates_array=[]
@@ -68,6 +68,7 @@ for radar_folders in sorted(os.listdir(radar_data_folder_path)):
             
             dates_array.append(datetime_obj)
             with h5py.File(radar_file, 'a') as file:
+                print(radar_file)
                 total_image_count+=1
                 a_group_key = list(file.keys())[0]
                 dataset_DXk = file.get(a_group_key)
@@ -79,7 +80,7 @@ for radar_folders in sorted(os.listdir(radar_data_folder_path)):
                 percentage=(np.count_nonzero(ds_arr)/ ds_arr.size) * 100
                 max_precipitation_array.append(np.max(ds_arr))
                 max_precipitation_array_persentage.append((np.count_nonzero(ds_arr>200)/ ds_arr.size) * 100)
-                if np.max(ds_arr)>200:
+                if np.max(ds_arr)>100:
                     image_with_outliers+=1
                 if (np.count_nonzero(ds_arr<0)/ ds_arr.size) * 100 >36:
                     total_nan_count+=1
