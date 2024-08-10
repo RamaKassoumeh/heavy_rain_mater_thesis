@@ -7,7 +7,7 @@ sys.path.append(current)
 sys.path.append(parent)
 sys.path.append(parparent)
 
-from dataloader.RadarFilterRainNetSatelliteDataset import RadarFilterRainNetSatelliteDataset
+from dataloader.RadarFilterRainNetSatellite15MinDataset import RadarFilterRainNetSatelliteDataset
 
 from models.RainNet_Satellite import RainNet
 import model_RainNet
@@ -15,7 +15,7 @@ import model_RainNet
 radar_inverse_transform=model_RainNet.radar_inverseTransform
 
 train_dataset = RadarFilterRainNetSatelliteDataset(
-    img_dir='/raid/heavyrain_dataset/RadarData_summer_18_19/',
+    img_dir='/raid/heavyrain_dataset/RadarData_summer_18_19_min_15/',
     sat_dir='/raid/heavyrain_dataset/SatelliteData_summer_18_19/',
     transform=model_RainNet.radar_transform,
     inverse_transform=radar_inverse_transform,
@@ -24,7 +24,7 @@ train_dataset = RadarFilterRainNetSatelliteDataset(
 )
 
 validate_data = RadarFilterRainNetSatelliteDataset(
-    img_dir='/raid/heavyrain_dataset/RadarData_summer_20/',
+    img_dir='/raid/heavyrain_dataset/RadarData_summer_20_min_15/',
     sat_dir='/raid/heavyrain_dataset/SatelliteData_summer_20/',
     transform=model_RainNet.radar_transform,
     inverse_transform=radar_inverse_transform,
@@ -42,6 +42,6 @@ validate_data = RadarFilterRainNetSatelliteDataset(
 # )
 
 modelRainnet=RainNet()
-file_name='radar_trainer_30M_RainNet_3d_Sat_summer'
+file_name='radar_trainer_30M_RainNet_3d_Sat_summer_15_min'
 
-model_RainNet.train_model(train_dataset,validate_data,modelRainnet,file_name,radar_inverse_transform,batch_size=50,run_name='radar_trainer_30M_RainNet_3d_Sat_summer_20240724_233409')
+model_RainNet.train_model(train_dataset,validate_data,modelRainnet,file_name,radar_inverse_transform,batch_size=25)

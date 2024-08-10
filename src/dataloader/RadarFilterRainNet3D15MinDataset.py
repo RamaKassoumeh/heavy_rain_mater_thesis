@@ -45,7 +45,7 @@ class RadarFilterRainNetDataset(Dataset):
     def read_radar_image(self,indx,return_original=False):
         try:
             img_path =  self.img_names[indx]
-            print(img_path)
+            # print(img_path)
             file = h5py.File(img_path, 'r')
             a_group_key = list(file.keys())[0]
             dataset_DXk = file.get(a_group_key)

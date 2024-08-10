@@ -7,23 +7,23 @@ sys.path.append(current)
 sys.path.append(parent)
 sys.path.append(parparent)
 
-from dataloader.RadarFilterRainNet3DWithoutUndefinedDataset import RadarFilterRainNetDataset
+from dataloader.RadarFilterRainNet3D15MinDataset import RadarFilterRainNetDataset
 
 from models.RainNet3D import RainNet
 
 import model_RainNet
 
-radar_transform=model_RainNet.radar_without_undefined_transform
-radar_inverse_transform=model_RainNet.radar_without_undefined_inverse_transform
+radar_transform=model_RainNet.radar_transform
+radar_inverse_transform=model_RainNet.radar_inverseTransform
 
 train_dataset = RadarFilterRainNetDataset(
-    img_dir='/raid/heavyrain_dataset/RadarData_summer_18_19/',
+    img_dir='/raid/heavyrain_dataset/RadarData_summer_18_19_min_15/',
     transform=radar_transform,
     inverse_transform=radar_inverse_transform
 )
 
 validate_data = RadarFilterRainNetDataset(
-    img_dir='/raid/heavyrain_dataset/RadarData_summer_20/',
+    img_dir='/raid/heavyrain_dataset/RadarData_summer_20_min_15/',
     transform=radar_transform,
     inverse_transform=radar_inverse_transform
 )
@@ -36,5 +36,5 @@ validate_data = RadarFilterRainNetDataset(
 
 
 modelRainnet=RainNet()
-file_name='radar_trainer_30M_RainNet_3d_Log_summer_without_undefined'
-model_RainNet.train_model(train_dataset,validate_data,modelRainnet,file_name,radar_inverse_transform,batch_size=500)
+file_name='radar_trainer_30M_RainNet_3d_Log_summer_15_min'
+model_RainNet.train_model(train_dataset,validate_data,modelRainnet,file_name,radar_inverse_transform,batch_size=300)

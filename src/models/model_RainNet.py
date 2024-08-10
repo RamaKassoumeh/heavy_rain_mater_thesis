@@ -146,11 +146,11 @@ def train_model(train_dataset,validate_data,model,file_name,inverse_trans,batch_
     train_dataloader = DataLoader(
         dataset=train_dataset,
         batch_size=batch_size,
-        shuffle=True,
+        shuffle=False,
         # num_workers=8
     )
-    # for batch_num, (input, target) in enumerate(tqdm(train_dataloader), 1):
-    #     continue
+    for batch_num, (input, target) in enumerate(tqdm(train_dataloader), 1):
+        continue
 
     validate_dataloader = DataLoader(
         dataset=validate_data,
@@ -281,9 +281,20 @@ def train_model(train_dataset,validate_data,model,file_name,inverse_trans,batch_
         model.eval()
         csi_values.clear()
         fss_values.clear()
+        tp_values_array.clear()
+        fp_values_array.clear()
+        fn_values_array.clear()
+        numerator_values_array.clear()
+        denominator_values_array.clear()
         # Intinalize CSI for each category across all images
         csi_values = {category: [] for category in categories_threshold.keys()}
         fss_values = {category: [] for category in categories_threshold.keys()}
+        tp_values_array = {category: [] for category in categories_threshold.keys()}
+        fp_values_array = {category: [] for category in categories_threshold.keys()}
+        fn_values_array = {category: [] for category in categories_threshold.keys()}
+        # Calculate fss for each category across all images
+        numerator_values_array = {category: [] for category in categories_threshold.keys()}
+        denominator_values_array = {category: [] for category in categories_threshold.keys()}
         rmse_values = []
         with torch.no_grad():
             for batch_num, (input, target) in enumerate(tqdm(validate_dataloader), 1):
@@ -295,13 +306,18 @@ def train_model(train_dataset,validate_data,model,file_name,inverse_trans,batch_
                 val_loss += loss.item()
                 target_img=inverse_trans(target)
                 output_img=inverse_trans(output)
-                mse,csi,fss=calculate_metrics(target_img,output_img)
+                mse,tp_values, fp_values, fn_values,numerator,denominator=calculate_metrics(target_img,output_img)
                 rmse = np.sqrt(mse)
+                for category in categories_threshold.keys():
+                    # csi_values_array[category].append(csi[category])
+                    tp_values_array[category].append(tp_values[category])
+                    fp_values_array[category].append(fp_values[category])
+                    fn_values_array[category].append(fn_values[category])
+                    # fss_values_array[category].append(fss[category])
+                    numerator_values_array[category].append(numerator[category])
+                    denominator_values_array[category].append(denominator[category])
                 # Append RMSE to list
                 rmse_values.append(rmse)
-                for category in categories_threshold.keys():
-                    csi_values[category].append(csi[category])
-                    fss_values[category].append(fss[category])
                 if batch_num%100 ==0:
                     input=inverse_trans(input)
                     plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,target_img[0,0],output_img[0,0]], 2, 4,epoch,batch_num,'validate',file_name)
@@ -320,8 +336,12 @@ def train_model(train_dataset,validate_data,model,file_name,inverse_trans,batch_
         writer.add_scalars('Learning Rate', {'learning rate':current_lr}, epoch)
         
         checkpoint_path =f'{model_file_path}/{file_name}_model_checkpoint_{epoch}.pth'
-        csi_means = {category: np.nanmean(csi_values[category]) for category in categories_threshold.keys()}
-        fss_means = {category: np.nanmean(fss_values[category]) for category in categories_threshold.keys()}
+        # csi_means = {category: np.nanmean(csi_values[category]) for category in categories_threshold.keys()}
+        # fss_means = {category: np.nanmean(fss_values[category]) for category in categories_threshold.keys()}
+        csi_means = {category: np.sum(tp_values_array[category])/np.sum(tp_values_array[category]+fp_values_array[category]+ fn_values_array[category]) for category in categories_threshold.keys()}
+        # average_fss = {category: np.nanmean(fss_values_array[category]) for category in categories_threshold.keys()}
+        fss_means = {category: 1- (np.sum(numerator_values_array[category])/np.sum(denominator_values_array[category])) for category in categories_threshold.keys()}
+        
         average_rmse = np.mean(rmse_values)
         writer.add_scalars(f'CSI values',csi_means,epoch)
         writer.add_scalars(f'FSS values',fss_means,epoch)

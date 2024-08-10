@@ -88,7 +88,7 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
     def read_radar_image(self,indx,return_original=False):
         try:
             img_path =  self.img_names[indx]
-            print(img_path)
+            # print(img_path)
             file = h5py.File(img_path, 'r')
             a_group_key = list(file.keys())[0]
             dataset_DXk = file.get(a_group_key)
@@ -131,7 +131,7 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
 
     def read_updample_satellite_image(self,indx):
         satellite_file_name =  self.satellite_names[indx]
-        print(satellite_file_name)
+        # print(satellite_file_name)
         # print(f"{indx}:satellite:{satellite_file_name[-30:-20]}")
         # satellite_dataset = gdal.Open(satellite_file_name)
         # # Perform the upsampling
@@ -185,9 +185,9 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
             else:
                 satellite_image=self.read_updample_satellite_image(self.satellite_data_array[idx]-i)
             satellite_array.append(satellite_image)
-            # print(f"{idx}:radar:{self.img_names[self.radar_data_array[idx]-i][-14:-4]}")
-            # print(f"{idx}:satellite:{self.satellite_names[self.satellite_data_array[idx]-i][-30:-20]}")
-            assert int(self.img_names[self.radar_data_array[idx]-i][-14:-4])  >=  int(self.satellite_names[self.satellite_data_array[idx]-i][-30:-20])-8 and int(self.img_names[self.radar_data_array[idx]-i][-14:-4])  <=  int(self.satellite_names[self.satellite_data_array[idx]-i][-30:-20])
+            print(f"{idx}:radar:{self.img_names[self.radar_data_array[idx]-i][-14:-4]}")
+            print(f"{idx}:satellite:{self.satellite_names[self.satellite_data_array[idx]-i][-30:-20]}")
+            assert int(self.img_names[self.radar_data_array[idx]-i][-14:-4])  >=  int(self.satellite_names[self.satellite_data_array[idx]-i][-30:-20])-8 and int(self.img_names[self.radar_data_array[idx]-i][-14:-4])  <=  int(self.satellite_names[self.satellite_data_array[idx]-i][-30:-20])+5
 
         label_image=self.read_radar_image(self.radar_data_array[idx])
 
