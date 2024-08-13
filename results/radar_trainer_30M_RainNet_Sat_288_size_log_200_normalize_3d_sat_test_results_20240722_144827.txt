@@ -1,0 +1,23 @@
+test on file /raid/heavyrain_dataset/RadarData_summer_20/
+
+Average RMSE across all images: 5.115314483642578
+
+Average CSI for category: undefined: 0.6026970299377256
+
+Average CSI for category: light rain: 0.9629259018836551
+
+Average CSI for category: moderate rain: 0.27467569109953505
+
+Average CSI for category: heavy rain: 0.19617089040690022
+
+Average CSI for category: Violent rain: 0.016975619124985408
+
+Average FSS for category: undefined: 0.7993959542521115
+
+Average FSS for category: light rain: 0.9863866782264445
+
+Average FSS for category: moderate rain: 0.5438295788291605
+
+Average FSS for category: heavy rain: 0.4018365488511431
+
+Average FSS for category: Violent rain: 0.04928476221121824

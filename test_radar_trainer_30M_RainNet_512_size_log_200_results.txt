@@ -1,2 +1,0 @@
-
-Average CSI for category: violent rain: 0.9106903235425676

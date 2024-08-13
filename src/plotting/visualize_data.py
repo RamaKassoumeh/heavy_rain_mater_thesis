@@ -9,7 +9,7 @@ sys.path.append(parparent)
 from datetime import datetime
 
 import torch
-from dataloader.RadarFilterRainNetSatellite15MinDataset import RadarFilterRainNetSatelliteDataset
+from dataloader.RadarFilterRainNetSatelliteDataset import RadarFilterRainNetSatelliteDataset
 # from RadarFilterRainNetSatelliteDataset import RadarFilterRainNetSatelliteDataset
 import models.model_RainNet as model_RainNet
 from plotting import plot_images
@@ -27,6 +27,7 @@ train_dataset = RadarFilterRainNetSatelliteDataset(
     transform=model_RainNet.radar_transform,
     inverse_transform=model_RainNet.radar_inverseTransform,
     sat_transform=model_RainNet.satellite_transform,
+    lead_time=15
 )
 
 train_dataloader = DataLoader(

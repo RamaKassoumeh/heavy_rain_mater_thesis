@@ -28,7 +28,7 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
     def extract_date(self,file_name):
         return file_name[-30:-20]
     
-    def __init__(self, img_dir,sat_dir, transform=None,inverse_transform=None,return_original=False,sat_transform=None,random_satellite=False):
+    def __init__(self, img_dir,sat_dir, transform=None,inverse_transform=None,return_original=False,sat_transform=None,random_satellite=False,lead_time=5):
         self.img_dir = img_dir
         self.sat_dir=sat_dir
         self.return_original=return_original
@@ -79,6 +79,7 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
         # Extracting the dictionaries
         self.bands_min_values = data.get("Min values", {})
         self.bands_max_values = data.get("Max values", {})
+        self.lead_time=lead_time
 
     def __len__(self):
         # return 1000
@@ -174,7 +175,12 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
         radar_array=[]  
         satellite_array=[]
         # read 6 frames as input (0.5 hours), the current is the target
-        for i in range(1,7):      
+        lead_time_range=range(1,7)
+        if self.lead_time==15:
+            lead_time_range=range(3,9)
+        if self.lead_time==30:
+            lead_time_range=range(6,12)
+        for i in lead_time_range:      
             
             radar_image=self.read_radar_image(self.radar_data_array[idx]-i)
             radar_array.append(radar_image)

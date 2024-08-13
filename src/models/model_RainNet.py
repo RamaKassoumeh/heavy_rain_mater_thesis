@@ -146,17 +146,19 @@ def train_model(train_dataset,validate_data,model,file_name,inverse_trans,batch_
     train_dataloader = DataLoader(
         dataset=train_dataset,
         batch_size=batch_size,
-        shuffle=False,
+        shuffle=True,
         # num_workers=8
     )
-    for batch_num, (input, target) in enumerate(tqdm(train_dataloader), 1):
-        continue
+    # for batch_num, (input, target) in enumerate(tqdm(train_dataloader), 1):
+    #     continue
 
     validate_dataloader = DataLoader(
         dataset=validate_data,
         batch_size=25,
         shuffle=True
     )
+    # for batch_num, (input, target) in enumerate(tqdm(validate_dataloader), 1):
+    #     continue
     # test_loader = DataLoader(
     #     dataset=test_data,
     #     batch_size=25,
@@ -211,11 +213,14 @@ def train_model(train_dataset,validate_data,model,file_name,inverse_trans,batch_
     num_epochs = 50
     criterion = LogCoshLoss()
     # Initializing in a separate cell, so we can easily add more epochs to the same run
-    # Calculate CSI for each category across all images
     csi_values = {category: [] for category in categories_threshold.keys()}
-
-    # Calculate fss for each category across all images
     fss_values = {category: [] for category in categories_threshold.keys()}
+    tp_values_array = {category: [] for category in categories_threshold.keys()}
+    fp_values_array = {category: [] for category in categories_threshold.keys()}
+    fn_values_array = {category: [] for category in categories_threshold.keys()}
+    # Calculate fss for each category across all images
+    numerator_values_array = {category: [] for category in categories_threshold.keys()}
+    denominator_values_array = {category: [] for category in categories_threshold.keys()}
     if run_name is None:
         run_name=f'{file_name}_{timestamp}'
     run_file_name = f'{parparent}/runs/{run_name}'
@@ -268,12 +273,12 @@ def train_model(train_dataset,validate_data,model,file_name,inverse_trans,batch_
             # torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optim.step()
             train_loss += loss.item()
-            if batch_num%100 ==0:
+            if batch_num%200 ==0:
                 target=inverse_trans(target)
                 input=inverse_trans(input)
                 output=inverse_trans(output)
                 # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',file_name)
-                plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,target[0,0],output[0,0]], 2, 4,epoch,batch_num,'train',file_name)
+                plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,target[0,0],output[0,0]], 2, 4,epoch,batch_num,'train',file_name,adance_time=15)
 
         train_loss /= len(train_dataloader.dataset)
         print(f"the train loss is {train_loss}")
@@ -318,7 +323,7 @@ def train_model(train_dataset,validate_data,model,file_name,inverse_trans,batch_
                     denominator_values_array[category].append(denominator[category])
                 # Append RMSE to list
                 rmse_values.append(rmse)
-                if batch_num%100 ==0:
+                if batch_num%200 ==0:
                     input=inverse_trans(input)
                     plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,target_img[0,0],output_img[0,0]], 2, 4,epoch,batch_num,'validate',file_name)
                

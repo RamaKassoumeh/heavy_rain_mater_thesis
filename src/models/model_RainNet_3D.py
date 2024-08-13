@@ -7,7 +7,7 @@ sys.path.append(current)
 sys.path.append(parent)
 sys.path.append(parparent)
 
-from dataloader.RadarFilterRainNet3D15MinDataset import RadarFilterRainNetDataset
+from dataloader.RadarFilterRainNet3DDataset import RadarFilterRainNetDataset
 
 from models.RainNet3D import RainNet
 
@@ -19,13 +19,15 @@ radar_inverse_transform=model_RainNet.radar_inverseTransform
 train_dataset = RadarFilterRainNetDataset(
     img_dir='/raid/heavyrain_dataset/RadarData_summer_18_19_min_15/',
     transform=radar_transform,
-    inverse_transform=radar_inverse_transform
+    inverse_transform=radar_inverse_transform,
+    lead_time=15
 )
 
 validate_data = RadarFilterRainNetDataset(
     img_dir='/raid/heavyrain_dataset/RadarData_summer_20_min_15/',
     transform=radar_transform,
-    inverse_transform=radar_inverse_transform
+    inverse_transform=radar_inverse_transform,
+    lead_time=15
 )
 
 # test_data = RadarFilterRainNetDataset(

@@ -12,7 +12,7 @@ import PIL
 
 class RadarFilterRainNetDataset(Dataset):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    def __init__(self, img_dir, transform=None,inverse_transform=None,return_original=False):
+    def __init__(self, img_dir, transform=None,inverse_transform=None,return_original=False,lead_time=5):
         self.img_dir = img_dir
         self.return_original=return_original
         self.img_names = []
@@ -37,6 +37,7 @@ class RadarFilterRainNetDataset(Dataset):
                 radar_files = sorted(glob.glob(os.path.join(folder_path, '*.scu')))
                 self.img_names.extend(radar_files)
         self.radar_data_array=np.load(img_dir+'/radar_data_array.npy')
+        self.lead_time=lead_time
 
     def __len__(self):
         # return 1000
@@ -82,7 +83,12 @@ class RadarFilterRainNetDataset(Dataset):
     def __getitem__(self, idx):
         resized_radar_array=[]  
         # read 6 frames as input (0.5 hours), the current is the target
-        for i in range(1,7):         
+        lead_time_range=range(1,7)
+        if self.lead_time==15:
+            lead_time_range=range(3,9)
+        if self.lead_time==30:
+            lead_time_range=range(6,12)
+        for i in lead_time_range:           
             resized_image=self.read_radar_image(self.radar_data_array[idx]-i)
             resized_radar_array.append(resized_image)
 

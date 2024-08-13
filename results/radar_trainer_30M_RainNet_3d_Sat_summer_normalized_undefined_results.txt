@@ -1,0 +1,23 @@
+test on file radar_trainer_30M_RainNet_3d_Sat_summer_normalized_undefined
+
+Average RMSE across all images: 589.9736938476562
+
+Average CSI for category: undefined: 0.0770788077426737
+
+Average CSI for category: light rain: 0.6371346418415172
+
+Average CSI for category: moderate rain: 0.0
+
+Average CSI for category: heavy rain: 0.0
+
+Average CSI for category: Violent rain: 0.0
+
+Average FSS for category: undefined: 0.15396598397538522
+
+Average FSS for category: light rain: 0.7983243532759702
+
+Average FSS for category: moderate rain: 2.0287164333443464e-06
+
+Average FSS for category: heavy rain: 0.0
+
+Average FSS for category: Violent rain: 0.0
