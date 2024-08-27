@@ -140,7 +140,7 @@ satellite_inverseTransform = transforms.Compose([
     transforms.Lambda(denormalize_Satellite),
     ])
 
-def train_model(train_dataset,validate_data,model,file_name,inverse_trans,batch_size,run_name=None):
+def train_model(train_dataset,validate_data,model,file_name,inverse_trans,batch_size,run_name=None,advance_time=5):
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
     train_dataloader = DataLoader(
@@ -209,8 +209,8 @@ def train_model(train_dataset,validate_data,model,file_name,inverse_trans,batch_
     optim = Adam(model.parameters(), lr=1e-4)
     # Define learning rate scheduler
     # scheduler_increase = torch.optim.lr_scheduler.StepLR(optim, step_size=2, gamma=10)
-    scheduler_decrease = torch.optim.lr_scheduler.MultiStepLR(optim, milestones=[10,30,40], gamma=0.1)
-    num_epochs = 50
+    scheduler= torch.optim.lr_scheduler.MultiStepLR(optim, milestones=[10,30,40], gamma=0.1)
+    num_epochs = 35
     criterion = LogCoshLoss()
     # Initializing in a separate cell, so we can easily add more epochs to the same run
     csi_values = {category: [] for category in categories_threshold.keys()}
@@ -250,8 +250,11 @@ def train_model(train_dataset,validate_data,model,file_name,inverse_trans,batch_
         if 'run_name' in checkpoint:
             run_name = checkpoint['run_name']
             run_file_name = f'{parparent}/runs/{run_name}'
+        if 'scheduler' in checkpoint:
+            scheduler.load_state_dict(checkpoint['scheduler'])
         print(f"Resumed from checkpoint at epoch {start_epoch}")
     writer = SummaryWriter(run_file_name)
+    
     for epoch in range(start_epoch, num_epochs + 1):
 
         train_loss = 0
@@ -278,7 +281,7 @@ def train_model(train_dataset,validate_data,model,file_name,inverse_trans,batch_
                 input=inverse_trans(input)
                 output=inverse_trans(output)
                 # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',file_name)
-                plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,target[0,0],output[0,0]], 2, 4,epoch,batch_num,'train',file_name,adance_time=15)
+                plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,target[0,0],output[0,0]], 2, 4,epoch,batch_num,'train',file_name,advance_time=advance_time)
 
         train_loss /= len(train_dataloader.dataset)
         print(f"the train loss is {train_loss}")
@@ -357,9 +360,10 @@ def train_model(train_dataset,validate_data,model,file_name,inverse_trans,batch_
                     'run_name': run_name,
                     'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optim.state_dict(),
+                    'scheduler': scheduler.state_dict(),
                 }, checkpoint_path)
         print(f'Checkpoint saved at epoch {epoch}')
-        scheduler_decrease.step()
+        scheduler.step()
 
     # Save the model's state dictionary
     torch.save(model.state_dict(), f'{model_file_path}/{file_name}_model.pth')

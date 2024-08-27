@@ -14,7 +14,7 @@ import test_metrics
 import models.model_RainNet as model_RainNet
 
 radar_inverse_transform=model_RainNet.radar_inverseTransform
-test_file_name='/raid/heavyrain_dataset/RadarData_summer_21/'
+test_file_name='/raid/heavyrain_dataset/RadarData_summer_21_min_15/'
 
 test_data = RadarFilterRainNetSatelliteDataset(
     img_dir=test_file_name,
@@ -22,9 +22,10 @@ test_data = RadarFilterRainNetSatelliteDataset(
     transform=model_RainNet.radar_transform,
     inverse_transform=radar_inverse_transform,
     sat_transform=model_RainNet.satellite_transform,
-    random_satellite=False
+    random_satellite=False,
+    lead_time=15
 )
-file_name='radar_trainer_30M_RainNet_3d_Sat_summer_model_checkpoint_41'
+file_name='radar_trainer_30M_RainNet_3d_Sat_summer_15_min_model_checkpoint_10'
 
 model=RainNet()
-test_metrics.test_phase(file_name,model,test_data,test_file_name,radar_inverse_transform,batch_size=30)
+test_metrics.test_phase(file_name,model,test_data,test_file_name,radar_inverse_transform,batch_size=10,advance_time=15)

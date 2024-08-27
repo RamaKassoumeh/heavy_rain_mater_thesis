@@ -100,8 +100,8 @@ def check_conditions(event_persentage,event_max_precipitation,current_event_no,r
             accepted_events.append(current_event_no)
             satellite_events.append(sat_index)
             print(f"radar {radar_file} & Satellie {satellite_list[sat_index]}")
-            # if int(satellite_list[sat_index][-30:-20])-4!=int(radar_files_all[current_event_no][-14:-4]):
-                # print("not matched")
+            if int(satellite_list[sat_index][-30:-20])-4!=int(radar_files_all[current_event_no][-14:-4]):
+                print("not matched")
             return True
         
         elif event_persentage<threshold_persentage and zero_counter/total_files*100<=zero_persentage:
@@ -109,16 +109,16 @@ def check_conditions(event_persentage,event_max_precipitation,current_event_no,r
             satellite_events.append(sat_index)
             zero_counter=zero_counter+1
             print(f"radar {radar_file} & Satellie {satellite_list[sat_index]}")
-            # if int(satellite_list[sat_index][-30:-20])-4!=int(radar_file[-14:-4]):
-                # print("not matched")
+            if int(satellite_list[sat_index][-30:-20])-4!=int(radar_file[-14:-4]):
+                print("not matched")
             return True
     return False
 
-train_data = '/home/gouda/heavyrain/RadarData_summer_20_min_30/'
+train_data = '/home/gouda/heavyrain/RadarData_summer_21_min_30/'
 # validate_data = '/raid/heavyrain_dataset/RadarData_validate_18/'
 # test_data = '/home/gouda/heavyrain/RadarData_summer_21/'
 
-satellite_data='/home/gouda/heavyrain/SatelliteData_summer_20/'
+satellite_data='/home/gouda/heavyrain/SatelliteData_summer_21/'
 min_value=0
 max_value=0
 

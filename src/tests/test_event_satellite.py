@@ -47,7 +47,7 @@ decimal_places = 3
 # Multiply the tensor by 10^decimal_places
 factor = 10 ** decimal_places
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-file_name='radar_trainer_30M_RainNet_3d_Sat_summer_model_checkpoint_41'
+file_name='radar_trainer_30M_RainNet_3d_Sat_summer_model_checkpoint_46'
 
 model=RainNet()
 model=torch.nn.DataParallel(model)
@@ -147,7 +147,7 @@ def getitem(event_path):
         date_time_obj = datetime.strptime(prefix[2:12], '%y%m%d%H%M')
         date_time_obj_sat=round_down_minutes(date_time_obj)+ timedelta(minutes=4)
         # read 6 frames as input (0.5 hours), the current is the target
-        for i in range(1, 7):
+        for i in range(1,7):
             five_minutes_before = date_time_obj - timedelta(minutes=5*i)
             five_minutes_before_sat = date_time_obj_sat - timedelta(minutes=5*i)
             previous_file_name = f"{prefix[0:2]}{five_minutes_before.strftime('%y%m%d%H%M')}{extension}"
@@ -215,7 +215,7 @@ with torch.no_grad():
     actual_img=inverseTransform(target)
     predicted_img=inverseTransform(output)
     input=inverseTransform(input)
-    plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,actual_img[0,0],predicted_img[0,0]], 2, 4,1,1,'test',file_name)
+    plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,actual_img[0,0],predicted_img[0,0]], 2, 4,1,1,'test',file_name,advance_time=5)
         
     actual_flat = actual_img.flatten()
     predicted_flat = predicted_img.flatten()

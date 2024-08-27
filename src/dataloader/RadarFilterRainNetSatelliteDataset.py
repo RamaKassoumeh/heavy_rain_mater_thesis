@@ -1,3 +1,4 @@
+import datetime
 import sys
 import os
 current = os.path.dirname(os.path.realpath(__file__))
@@ -192,7 +193,8 @@ class RadarFilterRainNetSatelliteDataset(Dataset):
             satellite_array.append(satellite_image)
             # print(f"{idx}:radar:{self.img_names[self.radar_data_array[idx]-i][-14:-4]}")
             # print(f"{idx}:satellite:{self.satellite_names[self.satellite_data_array[idx]-i][-30:-20]}")
-            assert int(self.img_names[self.radar_data_array[idx]-i][-14:-4])  >=  int(self.satellite_names[self.satellite_data_array[idx]-i][-30:-20])-8 and int(self.img_names[self.radar_data_array[idx]-i][-14:-4])  <=  int(self.satellite_names[self.satellite_data_array[idx]-i][-30:-20])
+            # assert int(self.img_names[self.radar_data_array[idx]-i][-14:-4])  >=  int(self.satellite_names[self.satellite_data_array[idx]-i][-30:-20])-8 and int(self.img_names[self.radar_data_array[idx]-i][-14:-4])  <=  int(self.satellite_names[self.satellite_data_array[idx]-i][-30:-20])
+            assert datetime.datetime.strptime(self.img_names[self.radar_data_array[idx]-i][-14:-4], '%y%m%d%H%M')  >=   datetime.datetime.strptime(self.satellite_names[self.satellite_data_array[idx]-i][-30:-20], '%y%m%d%H%M')-datetime.timedelta(minutes=8) and  datetime.datetime.strptime(self.img_names[self.radar_data_array[idx]-i][-14:-4], '%y%m%d%H%M')  <=  datetime.datetime.strptime(self.satellite_names[self.satellite_data_array[idx]-i][-30:-20], '%y%m%d%H%M')+datetime.timedelta(minutes=5) , f"wrong Sat & radar {idx}:radar:{self.img_names[self.radar_data_array[idx]-i][-14:-4]}:satellite:{self.satellite_names[self.satellite_data_array[idx]-i][-30:-20]}"
 
         label_image=self.read_radar_image(self.radar_data_array[idx])
 

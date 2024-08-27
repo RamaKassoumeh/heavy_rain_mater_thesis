@@ -17,17 +17,17 @@ radar_transform=model_RainNet.radar_transform
 radar_inverse_transform=model_RainNet.radar_inverseTransform
 
 train_dataset = RadarFilterRainNetDataset(
-    img_dir='/raid/heavyrain_dataset/RadarData_summer_18_19_min_15/',
+    img_dir='/raid/heavyrain_dataset/RadarData_summer_18_19_min_30/',
     transform=radar_transform,
     inverse_transform=radar_inverse_transform,
-    lead_time=15
+    lead_time=30
 )
 
 validate_data = RadarFilterRainNetDataset(
-    img_dir='/raid/heavyrain_dataset/RadarData_summer_20_min_15/',
+    img_dir='/raid/heavyrain_dataset/RadarData_summer_20_min_30/',
     transform=radar_transform,
     inverse_transform=radar_inverse_transform,
-    lead_time=15
+    lead_time=30
 )
 
 # test_data = RadarFilterRainNetDataset(
@@ -38,5 +38,5 @@ validate_data = RadarFilterRainNetDataset(
 
 
 modelRainnet=RainNet()
-file_name='radar_trainer_30M_RainNet_3d_Log_summer_15_min'
-model_RainNet.train_model(train_dataset,validate_data,modelRainnet,file_name,radar_inverse_transform,batch_size=300)
+file_name='radar_trainer_30M_RainNet_3d_Log_summer_30_min'
+model_RainNet.train_model(train_dataset,validate_data,modelRainnet,file_name,radar_inverse_transform,batch_size=300,advance_time=30)

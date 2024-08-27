@@ -66,7 +66,7 @@ for radar_folders in sorted(os.listdir(radar_data_folder_path)):
            
             datetime_obj =  datetime.strptime(date,"%y%m%d%H%M")
             
-            dates_array.append(datetime_obj)
+            
             with h5py.File(radar_file, 'a') as file:
                 print(radar_file)
                 total_image_count+=1
@@ -76,15 +76,23 @@ for radar_folders in sorted(os.listdir(radar_data_folder_path)):
                 # ds_arr = np.where(ds_arr == -999, 0, ds_arr)
                 gain_rate=dataset_DXk.get('what').attrs["gain"]
                 ds_arr = ds_arr * gain_rate
-
+                print((np.count_nonzero((ds_arr > 7.5))/ ds_arr.size) * 100 )
+                if (np.count_nonzero((ds_arr > 50) & (ds_arr < 300))/ ds_arr.size) * 100 == 0 and (np.count_nonzero((ds_arr > 7.5))/ ds_arr.size) * 100 >3:
+                    image_with_outliers+=1
+                    file.close()
+                    continue
+                if np.max(ds_arr)>200:
+                    image_with_outliers+=1
+                    file.close()
+                    continue
                 percentage=(np.count_nonzero(ds_arr)/ ds_arr.size) * 100
                 max_precipitation_array.append(np.max(ds_arr))
                 max_precipitation_array_persentage.append((np.count_nonzero(ds_arr>200)/ ds_arr.size) * 100)
-                if np.max(ds_arr)>100:
-                    image_with_outliers+=1
+                
                 if (np.count_nonzero(ds_arr<0)/ ds_arr.size) * 100 >36:
                     total_nan_count+=1
                 # max_precipitation_array.append((np.count_nonzero(ds_arr>100)/ ds_arr.size) * 100)
+                dates_array.append(datetime_obj)
                 percentage_array.append(percentage)
                 # check_prev_frames(percentage,datetime_obj,len(percentage_array)-1)
                 check_condition(percentage,datetime_obj,np.max(ds_arr),len(percentage_array)-1)

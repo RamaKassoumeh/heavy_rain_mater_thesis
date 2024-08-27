@@ -85,7 +85,7 @@ def getitem(event_path):
 
         date_time_obj = datetime.strptime(prefix[2:12], '%y%m%d%H%M')
         # read 6 frames as input (0.5 hours), the current is the target
-        for i in range(1, 7):
+        for i in range(1,7):
             five_minutes_before = date_time_obj - timedelta(minutes=5*i)
 
             previous_file_name = f"{prefix[0:2]}{five_minutes_before.strftime('%y%m%d%H%M')}{extension}"
@@ -123,13 +123,14 @@ spatial_errors = []
 neighborhood_size=3
 model.eval()
 test_file_name='../RadarData_summer_21/210714/hd2107141255.scu'
+
 with torch.no_grad():
     input, target = getitem(test_file_name)
     output = model(input)
     actual_img=inverseTransform(target)
     predicted_img=inverseTransform(output)
     input=inverseTransform(input)
-    plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,actual_img[0,0],predicted_img[0,0]], 2, 4,1,1,'test',file_name)
+    plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,actual_img[0,0],predicted_img[0,0]], 2, 4,1,1,'test',file_name,advance_time=5)
     actual_flat = actual_img.flatten()
     predicted_flat = predicted_img.flatten()
     mse,csi_values,fss_values=calculate_metrics_one_value(actual_img,predicted_img)  

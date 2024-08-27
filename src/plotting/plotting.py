@@ -55,7 +55,7 @@ cmap = plt.cm.colors.ListedColormap([map_value_to_color(value) for value in np.l
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
 
-def plot_images(image_list, row, col, epoch, batch_num, name, folder_name, adance_time=5, save_image=True):
+def plot_images(image_list, row, col, epoch, batch_num, name, folder_name, advance_time=5, save_image=True):
     # Create a figure and divide it into two areas
     fig = plt.figure(figsize=(12, 6))  # Set overall figure size
     gs = fig.add_gridspec(1, 2, width_ratios=[5, 1])  # Divide into two areas, one with 3 times width
@@ -110,12 +110,12 @@ def plot_images(image_list, row, col, epoch, batch_num, name, folder_name, adanc
         ax_grid[i].imshow(image, cmap=cmap, vmin=-999, vmax=1000)  # Assuming grayscale images
         ax_grid[i].axis('off')
         if i < 6: 
-            ax_grid[i].set_title(f't - {(5 - i) * 5} mins' if i != 5 else 't mins')
+            ax_grid[i].set_title(f't - {((5 - i+1) * 5)+advance_time-5} mins')
         elif i == 6:
-            ax_grid[i].set_title(f't +{adance_time} mins (target)')
+            ax_grid[i].set_title(f't mins (target)')
 
         elif i == 7:
-            ax_grid[i].set_title(f't +{adance_time} mins (predict)')
+            ax_grid[i].set_title(f't mins (predict)')
     plt.tight_layout()
     # plt.show()
     

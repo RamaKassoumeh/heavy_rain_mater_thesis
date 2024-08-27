@@ -107,30 +107,30 @@ def read_radar_spicific_image(radar_file_path):
             print(img_path)
             raise e
 
-# radar_dir='/home/gouda/heavyrain/RadarData_summer_21/'
-# radar_data_array=np.load('/home/gouda/heavyrain/RadarData_summer_21/radar_data_array.npy')
-# min_values =[]
-# max_values =[]
+radar_dir='/home/gouda/heavyrain/RadarData_summer_21_min_15/'
+radar_data_array=np.load('/home/gouda/heavyrain/RadarData_summer_21_min_15/radar_data_array.npy')
+min_values =[]
+max_values =[]
 radar_names = []
-# for radar_folders in sorted(os.listdir(radar_dir)):
-#     # Construct the full path to the folder
-#     folder_path = os.path.join(radar_dir, radar_folders)
+for radar_folders in sorted(os.listdir(radar_dir)):
+    # Construct the full path to the folder
+    folder_path = os.path.join(radar_dir, radar_folders)
 
-#     # Check if the path is a directory
-#     if os.path.isdir(folder_path):
-#         # print(f"\nProcessing folder: {folder_path}")
-#         # use glob.glob to read all files in the folder order by name
-#         radar_files = sorted(glob.glob(os.path.join(folder_path, '*.scu')))
-#         radar_names.extend(radar_files)
+    # Check if the path is a directory
+    if os.path.isdir(folder_path):
+        # print(f"\nProcessing folder: {folder_path}")
+        # use glob.glob to read all files in the folder order by name
+        radar_files = sorted(glob.glob(os.path.join(folder_path, '*.scu')))
+        radar_names.extend(radar_files)
 
 
-# for indx in radar_data_array:
-#     # if indx>10694:
-#     #     break
-#     read_radar_image(indx)
+for indx in radar_data_array:
+    # if indx>10694:
+    #     break
+    read_radar_image(indx)
 
-radar_dir='/home/gouda/heavyrain/RadarData_summer_21/210714/hd2107141255.scu'
-read_radar_spicific_image(radar_dir)
+# radar_dir='/home/gouda/heavyrain/RadarData_summer_21/210714/hd2107141255.scu'
+# read_radar_spicific_image(radar_dir)
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
 with open(f'analyse_radar_test_{timestamp}.txt', 'w') as file:

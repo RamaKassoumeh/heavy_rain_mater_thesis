@@ -114,11 +114,11 @@ def check_conditions(event_persentage,event_max_precipitation,current_event_no,r
             return True
     return False
 
-train_data = '/home/gouda/heavyrain/RadarData_summer_20_min_15/'
+train_data = '/home/gouda/heavyrain/RadarData_summer_21_min_15/'
 # validate_data = '/raid/heavyrain_dataset/RadarData_validate_18/'
 # test_data = '/home/gouda/heavyrain/RadarData_summer_21/'
 
-satellite_data='/home/gouda/heavyrain/SatelliteData_summer_20/'
+satellite_data='/home/gouda/heavyrain/SatelliteData_summer_21/'
 min_value=0
 max_value=0
 
