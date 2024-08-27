@@ -1,0 +1,23 @@
+test on event ../RadarData_summer_21/210630/hd2106301750.scu
+
+Average RMSE across all images: 689.5750122070312
+
+Average CSI for category: undefined: 0.057
+
+Average CSI for category: light rain: 0.503
+
+Average CSI for category: moderate rain: 0.733
+
+Average CSI for category: heavy rain: 0.658
+
+Average CSI for category: Violent rain: 0.375
+
+Average FSS for category: undefined: 0.117
+
+Average FSS for category: light rain: 0.696
+
+Average FSS for category: moderate rain: 0.958
+
+Average FSS for category: heavy rain: 0.93
+
+Average FSS for category: Violent rain: 0.83
