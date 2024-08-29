@@ -30,8 +30,8 @@ decimal_places = 3
 # Multiply the tensor by 10^decimal_places
 factor = 10 ** decimal_places
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-file_name='radar_trainer_30M_RainNet_3d_Log_summer_model_checkpoint_34'
-
+file_name='radar_trainer_30M_RainNet_3d_Log_summer_15_min_model_checkpoint_25'
+lead_time=15
 model=RainNet()
 model=torch.nn.DataParallel(model)
 model.cuda()
@@ -50,7 +50,7 @@ inverseTransform=model_RainNet.radar_inverseTransform
 def read_radar_image(event_path):
         try:
             img_path =  event_path
-            
+            print(img_path)
             file = h5py.File(img_path, 'r')
             a_group_key = list(file.keys())[0]
             dataset_DXk = file.get(a_group_key)
@@ -85,12 +85,18 @@ def getitem(event_path):
 
         date_time_obj = datetime.strptime(prefix[2:12], '%y%m%d%H%M')
         # read 6 frames as input (0.5 hours), the current is the target
-        for i in range(1,7):
+        lead_time_range=range(1,7)
+        if lead_time==15:
+            lead_time_range=range(3,9)
+        if lead_time==30:
+            lead_time_range=range(6,12)
+        for i in lead_time_range:          
             five_minutes_before = date_time_obj - timedelta(minutes=5*i)
 
             previous_file_name = f"{prefix[0:2]}{five_minutes_before.strftime('%y%m%d%H%M')}{extension}"
 
             previous_file_path = os.path.join(os.path.split(directory)[0],previous_file_name[2:8], previous_file_name) 
+            
             resized_image=read_radar_image(previous_file_path)
             resized_radar_array.append(resized_image)
 
@@ -130,7 +136,8 @@ with torch.no_grad():
     actual_img=inverseTransform(target)
     predicted_img=inverseTransform(output)
     input=inverseTransform(input)
-    plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,actual_img[0,0],predicted_img[0,0]], 2, 4,1,1,'test',file_name,advance_time=5)
+    plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,actual_img[0,0],
+                 predicted_img[0,0]], 2, 4,1,1,'test',file_name,advance_time=lead_time)
     actual_flat = actual_img.flatten()
     predicted_flat = predicted_img.flatten()
     mse,csi_values,fss_values=calculate_metrics_one_value(actual_img,predicted_img)  

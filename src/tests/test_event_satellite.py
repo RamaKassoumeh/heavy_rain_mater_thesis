@@ -52,13 +52,12 @@ file_name='radar_trainer_30M_RainNet_3d_Sat_summer_model_checkpoint_46'
 model=RainNet()
 model=torch.nn.DataParallel(model)
 model.cuda()
-checkpoint_path=f'{parparent}/models_file/{file_name}.pth'
+checkpoint_path=f'{parparent}/models_file/models_file_temp/{file_name}.pth'
 checkpoint = torch.load(checkpoint_path)
 model.load_state_dict(checkpoint['model_state_dict'], strict=False)
 # model.load_state_dict(torch.load(f'{parparent}/models_file/{file_name}_model.pth'), strict=False)
 
 # from ipywidgets import widgets, HBox
-radar_data_folder_path = '../RadarData_test_18/'
 Satellite_dir='../SatelliteData_summer_21/'
 # Use GPU if available
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

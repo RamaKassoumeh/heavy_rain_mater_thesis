@@ -345,7 +345,8 @@ def test_phase(file_name,model,test_data,test_file_name,inverse_trans,batch_size
             if batch_num%10 ==0:
                 input=inverse_trans(input)
                 # plot_images([input[0,0,input.shape[2]-1],input[0,0,input.shape[2]-2],input[0,0,input.shape[2]-3],input[0,0,input.shape[2]-4],input[0,0,input.shape[2]-5],input[0,0,input.shape[2]-6] ,target[0][0],output[0][0]], 2, 4,epoch,batch_num,'train',folder_name)
-                plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,actual_img[0,0],predicted_img[0,0]], 2, 4,1,batch_num,'test',file_name,advance_time=advance_time)
+                plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] 
+                             ,actual_img[0,0],predicted_img[0,0]], 2, 4,1,batch_num,'test',file_name,advance_time=advance_time)
             mse,tp_values, fp_values, fn_values,numerator,denominator=calculate_metrics(actual_img,predicted_img)
             rmse = np.sqrt(mse)
             for category in categories_threshold.keys():

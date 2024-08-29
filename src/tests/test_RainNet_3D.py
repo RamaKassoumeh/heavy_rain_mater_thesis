@@ -25,4 +25,4 @@ test_data = RadarFilterRainNetDataset(
 file_name='radar_trainer_30M_RainNet_3d_Log_summer_15_min_model_checkpoint_25'
 
 model=RainNet()
-test_metrics.test_phase(file_name,model,test_data,test_file_name,radar_inverse_transform,batch_size=200)
+test_metrics.test_phase(file_name,model,test_data,test_file_name,radar_inverse_transform,batch_size=50,advance_time=15)

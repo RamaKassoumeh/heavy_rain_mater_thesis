@@ -210,7 +210,7 @@ def train_model(train_dataset,validate_data,model,file_name,inverse_trans,batch_
     # Define learning rate scheduler
     # scheduler_increase = torch.optim.lr_scheduler.StepLR(optim, step_size=2, gamma=10)
     scheduler= torch.optim.lr_scheduler.MultiStepLR(optim, milestones=[10,30,40], gamma=0.1)
-    num_epochs = 35
+    num_epochs = 25
     criterion = LogCoshLoss()
     # Initializing in a separate cell, so we can easily add more epochs to the same run
     csi_values = {category: [] for category in categories_threshold.keys()}
