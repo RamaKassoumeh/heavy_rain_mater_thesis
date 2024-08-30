@@ -1,0 +1,23 @@
+test on file /home/gouda/heavyrain/RadarData_summer_21/
+
+Average RMSE across all images: 599.43798828125
+
+Average CSI for category: undefined: 0.092
+
+Average CSI for category: light rain: 0.62
+
+Average CSI for category: moderate rain: 0.714
+
+Average CSI for category: heavy rain: 0.704
+
+Average CSI for category: Violent rain: 0.435
+
+Average FSS for category: undefined: 0.199
+
+Average FSS for category: light rain: 0.805
+
+Average FSS for category: moderate rain: 0.943
+
+Average FSS for category: heavy rain: 0.936
+
+Average FSS for category: Violent rain: 0.783
