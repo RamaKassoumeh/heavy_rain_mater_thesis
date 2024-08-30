@@ -11,8 +11,8 @@ from tensorboard.backend.event_processing.event_accumulator import EventAccumula
 import numpy as np
 
 # Paths to the directories for the two runs
-run_file_heavy_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_Log_summer_15_min_20240819_211329/CSI values_heavy rain'
-run_file_violent_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_Log_summer_15_min_20240819_211329/CSI values_Violent rain'
+run_file_heavy_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_Sat_summer_30_min_20240824_052004/CSI values_heavy rain'
+run_file_violent_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_Sat_summer_30_min_20240824_052004/CSI values_Violent rain'
 
 # Load the event files
 event_acc_heavy = EventAccumulator(run_file_heavy_rain)
@@ -32,7 +32,7 @@ scalars_violent = event_acc_violent.Scalars(scalar_tags_violent[0])
 epochs = [scalar.step for scalar in scalars_heavy]
 values_heavy = np.array([scalar.value for scalar in scalars_heavy])
 values_violent = np.array([scalar.value for scalar in scalars_violent])
-# values_heavy[19]=0
+
 
 # Calculate composite score (e.g., sum or average of the two)
 composite_scores = (values_heavy + values_violent)  # or (values_heavy + values_violent) / 2 for average
@@ -47,4 +47,4 @@ print(f"Composite score at best epoch: {composite_scores[best_epoch_index]}")
 best_epoch_index = np.argmax(values_heavy)
 best_epoch = epochs[best_epoch_index]
 print(f"The best epoch based on the composite score is: {best_epoch}")
-print(f"Composite score at best epoch: {composite_scores[best_epoch_index]}")
+print(f"Composite score at best epoch: {values_heavy[best_epoch_index]}")

@@ -30,9 +30,9 @@ from tqdm import tqdm
 from tests.test_metrics import calculate_metrics,categories_threshold
 from torchvision import transforms
 
-from dataloader.RadarFilterRainNetSatelliteDataset import RadarFilterRainNetSatelliteDataset
+from dataloader.RadarFilterRainNet3DDataset import RadarFilterRainNetDataset
 
-from models.RainNet_Satellite import RainNet
+from models.RainNet3D import RainNet
 
 import model_RainNet
 
@@ -153,7 +153,7 @@ def train_model(train_dataset,validate_data,model,file_name,inverse_trans,batch_
 
     validate_dataloader = DataLoader(
         dataset=validate_data,
-        batch_size=15,
+        batch_size=400,
         shuffle=True
     )
     # for batch_num, (input, target) in enumerate(tqdm(validate_dataloader), 1):
@@ -310,26 +310,40 @@ def train_model(train_dataset,validate_data,model,file_name,inverse_trans,batch_
 
 radar_transform=model_RainNet.radar_transform
 radar_inverse_transform=model_RainNet.radar_inverseTransform
-train_dataset = RadarFilterRainNetSatelliteDataset(
-    img_dir='/raid/heavyrain_dataset/RadarData_summer_18_19_min_15/',
-    sat_dir='/raid/heavyrain_dataset/SatelliteData_summer_18_19/',
+# train_dataset = RadarFilterRainNetSatelliteDataset(
+#     img_dir='/raid/heavyrain_dataset/RadarData_summer_18_19_min_15/',
+#     sat_dir='/raid/heavyrain_dataset/SatelliteData_summer_18_19/',
+#     transform=model_RainNet.radar_transform,
+#     inverse_transform=radar_inverse_transform,
+#     sat_transform=model_RainNet.satellite_transform,
+#     random_satellite=False,
+#     lead_time=15
+# )
+
+# validate_data = RadarFilterRainNetSatelliteDataset(
+#     img_dir='/raid/heavyrain_dataset/RadarData_summer_20_min_15/',
+#     sat_dir='/raid/heavyrain_dataset/SatelliteData_summer_20/',
+#     transform=model_RainNet.radar_transform,
+#     inverse_transform=radar_inverse_transform,
+#     sat_transform=model_RainNet.satellite_transform,
+#     random_satellite=False,
+#     lead_time=15
+# )
+
+train_dataset = RadarFilterRainNetDataset(
+    img_dir='/raid/heavyrain_dataset/RadarData_summer_18_19_min_30/',
     transform=model_RainNet.radar_transform,
     inverse_transform=radar_inverse_transform,
-    sat_transform=model_RainNet.satellite_transform,
-    random_satellite=False,
-    lead_time=15
+    lead_time=30
 )
 
-validate_data = RadarFilterRainNetSatelliteDataset(
-    img_dir='/raid/heavyrain_dataset/RadarData_summer_20_min_15/',
-    sat_dir='/raid/heavyrain_dataset/SatelliteData_summer_20/',
+validate_data = RadarFilterRainNetDataset(
+    img_dir='/raid/heavyrain_dataset/RadarData_summer_20_min_30/',
     transform=model_RainNet.radar_transform,
     inverse_transform=radar_inverse_transform,
-    sat_transform=model_RainNet.satellite_transform,
-    random_satellite=False,
-    lead_time=15
+    lead_time=30
 )
 
 modelRainnet=RainNet()
-file_name='radar_trainer_30M_RainNet_3d_Sat_summer_15_min'
-train_model(train_dataset,validate_data,modelRainnet,file_name,radar_inverse_transform,batch_size=25,advance_time=15)
+file_name='radar_trainer_30M_RainNet_3d_Log_summer_30_min'
+train_model(train_dataset,validate_data,modelRainnet,file_name,radar_inverse_transform,batch_size=100,advance_time=30)

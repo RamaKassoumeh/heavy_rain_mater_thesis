@@ -47,12 +47,12 @@ decimal_places = 3
 # Multiply the tensor by 10^decimal_places
 factor = 10 ** decimal_places
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-file_name='radar_trainer_30M_RainNet_3d_Sat_summer_model_checkpoint_46'
+file_name='radar_trainer_30M_RainNet_3d_Sat_summer_model_checkpoint_40'
 
 model=RainNet()
 model=torch.nn.DataParallel(model)
 model.cuda()
-checkpoint_path=f'{parparent}/models_file/models_file_temp/{file_name}.pth'
+checkpoint_path=f'{parparent}/models_file/{file_name}.pth'
 checkpoint = torch.load(checkpoint_path)
 model.load_state_dict(checkpoint['model_state_dict'], strict=False)
 # model.load_state_dict(torch.load(f'{parparent}/models_file/{file_name}_model.pth'), strict=False)

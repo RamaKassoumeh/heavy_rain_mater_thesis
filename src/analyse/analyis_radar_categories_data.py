@@ -96,8 +96,8 @@ def read_radar_spicific_image(radar_file_path):
             # get count of categoris
             undefined_count+=np.count_nonzero(ds_arr<0)
             liglht_rain_count+=np.count_nonzero((ds_arr>=0) & (ds_arr<2.5))
-            moderate_rain_count+=np.count_nonzero((ds_arr>=2.5) & (ds_arr<10))
-            heavy_rain_count+=np.count_nonzero((ds_arr>=10) & (ds_arr<50))
+            moderate_rain_count+=np.count_nonzero((ds_arr>=2.5) & (ds_arr<7.5))
+            heavy_rain_count+=np.count_nonzero((ds_arr>=7.5) & (ds_arr<50))
             extreme_rain_count+=np.count_nonzero((ds_arr>=50) & (ds_arr<=200))
             # get total count
             total_count+=ds_arr.size
@@ -107,8 +107,8 @@ def read_radar_spicific_image(radar_file_path):
             print(img_path)
             raise e
 
-radar_dir='/home/gouda/heavyrain/RadarData_summer_21_min_15/'
-radar_data_array=np.load('/home/gouda/heavyrain/RadarData_summer_21_min_15/radar_data_array.npy')
+radar_dir='/home/gouda/heavyrain/RadarData_summer_21/'
+radar_data_array=np.load('/home/gouda/heavyrain/RadarData_summer_21/radar_data_array.npy')
 min_values =[]
 max_values =[]
 radar_names = []
