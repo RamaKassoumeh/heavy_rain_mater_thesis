@@ -30,8 +30,8 @@ decimal_places = 3
 # Multiply the tensor by 10^decimal_places
 factor = 10 ** decimal_places
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-file_name='radar_trainer_30M_RainNet_3d_Log_summer_15_min_model_checkpoint_25'
-lead_time=15
+file_name='radar_trainer_30M_RainNet_3d_Log_summer_30_min_model_checkpoint_13'
+lead_time=30
 model=RainNet()
 model=torch.nn.DataParallel(model)
 model.cuda()

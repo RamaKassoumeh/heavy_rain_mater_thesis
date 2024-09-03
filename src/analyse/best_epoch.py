@@ -11,8 +11,8 @@ from tensorboard.backend.event_processing.event_accumulator import EventAccumula
 import numpy as np
 
 # Paths to the directories for the two runs
-run_file_heavy_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_Sat_summer_30_min_20240824_052004/CSI values_heavy rain'
-run_file_violent_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_Sat_summer_30_min_20240824_052004/CSI values_Violent rain'
+run_file_heavy_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_Sat_summer_30_min_20240824_052004/FSS values_heavy rain'
+run_file_violent_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_Sat_summer_30_min_20240824_052004/FSS values_Violent rain'
 
 # Load the event files
 event_acc_heavy = EventAccumulator(run_file_heavy_rain)

@@ -14,15 +14,15 @@ import models.model_RainNet as model_RainNet
 
 import test_metrics
 radar_inverse_transform=model_RainNet.radar_inverseTransform
-test_file_name='/home/gouda/heavyrain/RadarData_summer_21/'
+test_file_name='/home/gouda/heavyrain/RadarData_summer_21_min_30/'
 test_data = RadarFilterRainNetDataset(
     img_dir=test_file_name,
     transform=model_RainNet.radar_transform,
     inverse_transform=radar_inverse_transform,
-    lead_time=5
+    lead_time=30
 )
 
-file_name='radar_trainer_30M_RainNet_3d_Log_summer_model_checkpoint_34'
+file_name='radar_trainer_30M_RainNet_3d_Log_summer_30_min_model_checkpoint_13'
 
 model=RainNet()
-test_metrics.test_phase(file_name,model,test_data,test_file_name,radar_inverse_transform,batch_size=200,advance_time=5)
+test_metrics.test_phase(file_name,model,test_data,test_file_name,radar_inverse_transform,batch_size=200,advance_time=30)
