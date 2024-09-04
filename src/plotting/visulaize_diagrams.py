@@ -201,16 +201,27 @@ plt.savefig("Radar Model vs Radar & Satellite +5 CSI.png")
 
 radar_heavy_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_Log_summer_15_min_20240819_211329_2/CSI values_heavy rain'
 radar_violent_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_Log_summer_15_min_20240819_211329_2/CSI values_Violent rain'
-
+radar_moderate_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_Log_summer_15_min_20240819_211329_2/CSI values_moderate rain'
+radar_light_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_Log_summer_15_min_20240819_211329_2/CSI values_light rain'
+radar_undefined = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_Log_summer_15_min_20240819_211329_2/CSI values_undefined'
 
 sat_heavy_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_Sat_summer_15_min_20240819_210347_2/CSI values_heavy rain'
 sat_violent_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_Sat_summer_15_min_20240819_210347_2/CSI values_Violent rain'
+sat_moderate_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_Sat_summer_15_min_20240819_210347_2/CSI values_moderate rain'
+sat_light_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_Sat_summer_15_min_20240819_210347_2/CSI values_light rain'
+sat_undefined = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_Sat_summer_15_min_20240819_210347_2/CSI values_undefined'
 
 radar_heavy_steps, radar_heavy_values = extract_event_data(radar_heavy_rain)
 radar_violent_steps, radar_violent_values = extract_event_data(radar_violent_rain)
+radar_moderate_steps, radar_moderate_values = extract_event_data(radar_moderate_rain)   
+radar_light_steps, radar_light_values = extract_event_data(radar_light_rain)
+radar_undefined_steps, radar_undefined_values = extract_event_data(radar_undefined)
 
 sat_heavy_steps, sat_heavy_values = extract_event_data(sat_heavy_rain)
 sat_violent_steps, sat_violent_values = extract_event_data(sat_violent_rain)
+sat_moderate_steps, sat_moderate_values = extract_event_data(sat_moderate_rain)
+sat_light_steps, sat_light_values = extract_event_data(sat_light_rain)
+sat_undefined_steps, sat_undefined_values = extract_event_data(sat_undefined)
 
 # Plotting the data
 plt.figure(figsize=(10, 6))
@@ -230,7 +241,25 @@ plt.legend()
 
 plt.savefig("Radar Model vs Radar & Satellite +15 CSI.png")
 
+# Plotting the data
+plt.figure(figsize=(10, 6))
 
+plt.plot(radar_moderate_steps, radar_moderate_values, label='Moderate Rain: Radar Model', color='orange')
+plt.plot(sat_moderate_steps, sat_moderate_values, label='Moderate Rain: Radar & Satellite Model', color='red')
+plt.plot(radar_light_steps, radar_light_values, label='Light Rain: Radar Model', color='green')
+plt.plot(sat_light_steps, sat_light_values, label='Light Rain: Radar & Satellite Model', color='blue')
+plt.plot(radar_undefined_steps, radar_undefined_values, label='Undefined: Radar Model', color='pink')
+plt.plot(sat_undefined_steps, sat_undefined_values, label='Undefined: Radar & Satellite Model', color='purple')
+# plt.ylim(4e-8, 0.0004)
+# Use a logarithmic scale on the y-axis
+# plt.yscale('log')
+plt.xlim(left=0)
+plt.xlabel('Epoch')
+plt.ylabel('CSI Value')
+# plt.title('Training and Validation Loss')
+# plt.legend()
+plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+plt.savefig("Radar Model vs Radar & Satellite +15 CSI others.png", bbox_inches='tight')
 
 #### +30 min lead time
 
