@@ -5,7 +5,6 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 import pandas as pd
-import cupy as cp
 import h5py
 from PIL import Image
 import PIL
@@ -34,9 +33,7 @@ def read_radar_image(indx):
             dataset_DXk = file.get(a_group_key)
 
             ds_arr = dataset_DXk.get('image')[:]  # the image data in an array of floats
-            
-            # print((np.count_nonzero(ds_arr)/ ds_arr.size) * 100)
-            # print((np.count_nonzero(ds_arr)/ ds_arr.size) * 100)
+            # the gain_rate depends on the radar file generation
             gain_rate=dataset_DXk.get('what').attrs["gain"]
             ds_arr = np.where(ds_arr >0, ds_arr * gain_rate, ds_arr)
 
@@ -44,7 +41,6 @@ def read_radar_image(indx):
             ds_arr = np.where(ds_arr >max_value, max_value, ds_arr)
             # Convert the 2D array to a PIL Image           
             image = Image.fromarray(ds_arr[137:436, 58:357]) # get only NRW radar area
-            # resized_image = image.resize((128, 128))
             resized_image = image.resize((target_width, target_height),PIL.Image.NEAREST )
                     
             # Convert the resized image back to a 2D NumPy array

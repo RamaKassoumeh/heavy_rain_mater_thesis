@@ -25,7 +25,6 @@ from models.RainNet_Satellite import RainNet
 from models import model_RainNet
 from plotting.plotting import plot_images
 
-from convlstm import Seq2Seq
 from torch.utils.data import DataLoader
 import h5py
 import os
@@ -38,7 +37,6 @@ from rasterio.enums import Resampling
 from torchvision import transforms
 import numpy as np
 from sklearn.metrics import confusion_matrix
-import seaborn as sns
 
 from tests.test_metrics import calculate_metrics, calculate_metrics_one_value,categories_threshold
 
@@ -47,15 +45,14 @@ decimal_places = 3
 # Multiply the tensor by 10^decimal_places
 factor = 10 ** decimal_places
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-file_name='radar_trainer_30M_RainNet_3d_Sat_summer_30_min_model_checkpoint_6'
+model_file_name='radar_trainer_30M_RainNet_3d_Sat_summer_30_min_model_checkpoint_6'
 lead_time=30
 model=RainNet()
 model=torch.nn.DataParallel(model)
 model.cuda()
-checkpoint_path=f'{parparent}/models_file/{file_name}.pth'
+checkpoint_path=f'{parparent}/models_file/{model_file_name}.pth'
 checkpoint = torch.load(checkpoint_path)
 model.load_state_dict(checkpoint['model_state_dict'], strict=False)
-# model.load_state_dict(torch.load(f'{parparent}/models_file/{file_name}_model.pth'), strict=False)
 
 # from ipywidgets import widgets, HBox
 Satellite_dir='../SatelliteData_summer_21/'
@@ -194,11 +191,6 @@ def getitem(event_path):
         batch=batch.cuda()
         label=label.cuda()
         return batch, label
-# Define the loss function  
-# test phase
-# Define the rain categories and thresholds
-# categories = ['undefined','light rain', 'moderate rain', 'heavy rain','violent rain']
-# thresholds = [(-999, -0.1),(-0.1, 2.5), (2.5, 15), (15, 30), (30, 200)]  # Adjust based on your data
 
 # Calculate RMSE for each image
 rmse_values = []
@@ -208,7 +200,7 @@ csi_values = {category: [] for category in categories_threshold.keys()}
 
 # Calculate fss for each category across all images
 fss_values = {category: [] for category in categories_threshold.keys()}
-output_file_path = f'{parparent}/results/{file_name}_test_results_{timestamp}.txt'  # Specify the file path where you want to save the results
+output_file_path = f'{parparent}/results/{model_file_name}_test_results_{timestamp}.txt'  # Specify the file path where you want to save the results
 
 spatial_errors = []
 neighborhood_size=3
@@ -220,7 +212,7 @@ with torch.no_grad():
     actual_img=inverseTransform(target)
     predicted_img=inverseTransform(output)
     input=inverseTransform(input)
-    plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,actual_img[0,0],predicted_img[0,0]], 2, 4,1,1,'test',file_name,advance_time=lead_time)
+    plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,actual_img[0,0],predicted_img[0,0]], 2, 4,1,1,'test',model_file_name,advance_time=lead_time)
         
     actual_flat = actual_img.flatten()
     predicted_flat = predicted_img.flatten()

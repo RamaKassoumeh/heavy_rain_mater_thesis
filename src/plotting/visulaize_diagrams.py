@@ -30,119 +30,119 @@ mse_training_path = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_MSE_20240718
 mse_validation_path = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_MSE_20240718_013049/Training vs. Validation Loss_Validation'
 
 # Extracting data from each event file
-log_train_steps, log_train_values = extract_event_data(log_training_path)
-log_val_steps, log_val_values = extract_event_data(log_validation_path)
-mse_train_steps, mse_train_values = extract_event_data(mse_training_path)
-mse_val_steps, mse_val_values = extract_event_data(mse_validation_path)
+# log_train_steps, log_train_values = extract_event_data(log_training_path)
+# log_val_steps, log_val_values = extract_event_data(log_validation_path)
+# mse_train_steps, mse_train_values = extract_event_data(mse_training_path)
+# mse_val_steps, mse_val_values = extract_event_data(mse_validation_path)
 
-# Plotting the data
-plt.figure(figsize=(10, 6))
+# # Plotting the data
+# plt.figure(figsize=(10, 6))
 
-plt.plot(log_train_steps, log_train_values, label='Logcosh Training Loss', color='blue')
-plt.plot(log_val_steps, log_val_values, label='Logcosh Validation Loss', color='orange')
-plt.plot(mse_train_steps, mse_train_values, label='MSE Training Loss', color='green')
-plt.plot(mse_val_steps, mse_val_values, label='MSE Validation Loss', color='red')
+# plt.plot(log_train_steps, log_train_values, label='Logcosh Training Loss', color='blue')
+# plt.plot(log_val_steps, log_val_values, label='Logcosh Validation Loss', color='orange')
+# plt.plot(mse_train_steps, mse_train_values, label='MSE Training Loss', color='green')
+# plt.plot(mse_val_steps, mse_val_values, label='MSE Validation Loss', color='red')
 
-# plt.ylim(4e-8, 0.0004)
-# Use a logarithmic scale on the y-axis
-plt.yscale('log')
-plt.xlabel('Epoch')
-plt.ylabel('Loss Value')
-plt.title('Training and Validation Loss')
-plt.legend()
-
-plt.savefig("MSE vs Log.png")
-
-log_heavy_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_Log_20240718_013007/CSI values_heavy rain'
-log_violent_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_Log_20240718_013007/CSI values_Violent rain'
-
-
-mse_heavy_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_MSE_20240718_013049/CSI values_heavy rain'
-mse_violent_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_MSE_20240718_013049/CSI values_Violent rain'
-
-log_heavy_steps, log_heavy_values = extract_event_data(log_heavy_rain)
-log_violent_steps, log_violent_values = extract_event_data(log_violent_rain)
-
-mse_heavy_steps, mse_heavy_values = extract_event_data(mse_heavy_rain)
-mse_violent_steps, mse_violent_values = extract_event_data(mse_violent_rain)
-# Plotting the data
-plt.figure(figsize=(10, 6))
-
-plt.plot(log_heavy_steps, log_heavy_values, label='Heavy Rain: Logcosh Model', color='orange')
-plt.plot(mse_heavy_steps, mse_heavy_values, label='Heavy Rain: MSE Model', color='red')
-
-# plt.ylim(4e-8, 0.0004)
-# Use a logarithmic scale on the y-axis
+# # plt.ylim(4e-8, 0.0004)
+# # Use a logarithmic scale on the y-axis
 # plt.yscale('log')
-plt.xlim(left=0)
-plt.xlabel('Epoch')
-plt.ylabel('CSI Value')
+# plt.xlabel('Epoch')
+# plt.ylabel('Loss Value')
 # plt.title('Training and Validation Loss')
-plt.legend()
+# plt.legend()
 
-plt.savefig("MSE vs Log CSI heavyrain.png")
+# plt.savefig("MSE vs Log.png")
 
-plt.figure(figsize=(10, 6))
-
-plt.plot(log_violent_steps, log_violent_values, label='Violent Rain: Logcosh Model', color='blue')
-plt.plot(mse_violent_steps, mse_violent_values, label='Violent Rain: MSE Model', color='green')
-
-# plt.ylim(4e-8, 0.0004)
-# Use a logarithmic scale on the y-axis
-# plt.yscale('log')
-plt.xlim(left=0)
-plt.xlabel('Epoch')
-plt.ylabel('CSI Value')
-# plt.title('Training and Validation Loss')
-plt.legend()
-
-plt.savefig("MSE vs Log CSI Violent.png")
+# log_heavy_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_Log_20240718_013007/CSI values_heavy rain'
+# log_violent_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_Log_20240718_013007/CSI values_Violent rain'
 
 
-log_heavy_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_Log_20240718_013007/FSS values_heavy rain'
-log_violent_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_Log_20240718_013007/FSS values_Violent rain'
+# mse_heavy_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_MSE_20240718_013049/CSI values_heavy rain'
+# mse_violent_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_MSE_20240718_013049/CSI values_Violent rain'
+
+# log_heavy_steps, log_heavy_values = extract_event_data(log_heavy_rain)
+# log_violent_steps, log_violent_values = extract_event_data(log_violent_rain)
+
+# mse_heavy_steps, mse_heavy_values = extract_event_data(mse_heavy_rain)
+# mse_violent_steps, mse_violent_values = extract_event_data(mse_violent_rain)
+# # Plotting the data
+# plt.figure(figsize=(10, 6))
+
+# plt.plot(log_heavy_steps, log_heavy_values, label='Heavy Rain: Logcosh Model', color='orange')
+# plt.plot(mse_heavy_steps, mse_heavy_values, label='Heavy Rain: MSE Model', color='red')
+
+# # plt.ylim(4e-8, 0.0004)
+# # Use a logarithmic scale on the y-axis
+# # plt.yscale('log')
+# plt.xlim(left=0)
+# plt.xlabel('Epoch')
+# plt.ylabel('CSI Value')
+# # plt.title('Training and Validation Loss')
+# plt.legend()
+
+# plt.savefig("MSE vs Log CSI heavyrain.png")
+
+# plt.figure(figsize=(10, 6))
+
+# plt.plot(log_violent_steps, log_violent_values, label='Violent Rain: Logcosh Model', color='blue')
+# plt.plot(mse_violent_steps, mse_violent_values, label='Violent Rain: MSE Model', color='green')
+
+# # plt.ylim(4e-8, 0.0004)
+# # Use a logarithmic scale on the y-axis
+# # plt.yscale('log')
+# plt.xlim(left=0)
+# plt.xlabel('Epoch')
+# plt.ylabel('CSI Value')
+# # plt.title('Training and Validation Loss')
+# plt.legend()
+
+# plt.savefig("MSE vs Log CSI Violent.png")
 
 
-mse_heavy_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_MSE_20240718_013049/FSS values_heavy rain'
-mse_violent_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_MSE_20240718_013049/FSS values_Violent rain'
+# log_heavy_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_Log_20240718_013007/FSS values_heavy rain'
+# log_violent_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_Log_20240718_013007/FSS values_Violent rain'
 
-log_heavy_steps, log_heavy_values = extract_event_data(log_heavy_rain)
-log_violent_steps, log_violent_values = extract_event_data(log_violent_rain)
 
-mse_heavy_steps, mse_heavy_values = extract_event_data(mse_heavy_rain)
-mse_violent_steps, mse_violent_values = extract_event_data(mse_violent_rain)
-# Plotting the data
-plt.figure(figsize=(10, 6))
+# mse_heavy_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_MSE_20240718_013049/FSS values_heavy rain'
+# mse_violent_rain = f'{parparent}/runs/radar_trainer_30M_RainNet_3d_MSE_20240718_013049/FSS values_Violent rain'
 
-plt.plot(log_heavy_steps, log_heavy_values, label='Heavy Rain: Logcosh Model', color='orange')
-plt.plot(mse_heavy_steps, mse_heavy_values, label='Heavy Rain: MSE Model', color='red')
+# log_heavy_steps, log_heavy_values = extract_event_data(log_heavy_rain)
+# log_violent_steps, log_violent_values = extract_event_data(log_violent_rain)
 
-# plt.ylim(4e-8, 0.0004)
-# Use a logarithmic scale on the y-axis
-# plt.yscale('log')
-plt.xlim(left=0)
-plt.xlabel('Epoch')
-plt.ylabel('FSS Value')
-# plt.title('Training and Validation Loss')
-plt.legend()
+# mse_heavy_steps, mse_heavy_values = extract_event_data(mse_heavy_rain)
+# mse_violent_steps, mse_violent_values = extract_event_data(mse_violent_rain)
+# # Plotting the data
+# plt.figure(figsize=(10, 6))
 
-plt.savefig("MSE vs Log FSS heavyrain.png")
+# plt.plot(log_heavy_steps, log_heavy_values, label='Heavy Rain: Logcosh Model', color='orange')
+# plt.plot(mse_heavy_steps, mse_heavy_values, label='Heavy Rain: MSE Model', color='red')
 
-plt.figure(figsize=(10, 6))
+# # plt.ylim(4e-8, 0.0004)
+# # Use a logarithmic scale on the y-axis
+# # plt.yscale('log')
+# plt.xlim(left=0)
+# plt.xlabel('Epoch')
+# plt.ylabel('FSS Value')
+# # plt.title('Training and Validation Loss')
+# plt.legend()
 
-plt.plot(log_violent_steps, log_violent_values, label='Violent Rain: Logcosh Model', color='blue')
-plt.plot(mse_violent_steps, mse_violent_values, label='Violent Rain: MSE Model', color='green')
+# plt.savefig("MSE vs Log FSS heavyrain.png")
 
-# plt.ylim(4e-8, 0.0004)
-# Use a logarithmic scale on the y-axis
-# plt.yscale('log')
-plt.xlim(left=0)
-plt.xlabel('Epoch')
-plt.ylabel('FSS Value')
-# plt.title('Training and Validation Loss')
-plt.legend()
+# plt.figure(figsize=(10, 6))
 
-plt.savefig("MSE vs Log FSS Violent.png")
+# plt.plot(log_violent_steps, log_violent_values, label='Violent Rain: Logcosh Model', color='blue')
+# plt.plot(mse_violent_steps, mse_violent_values, label='Violent Rain: MSE Model', color='green')
+
+# # plt.ylim(4e-8, 0.0004)
+# # Use a logarithmic scale on the y-axis
+# # plt.yscale('log')
+# plt.xlim(left=0)
+# plt.xlabel('Epoch')
+# plt.ylabel('FSS Value')
+# # plt.title('Training and Validation Loss')
+# plt.legend()
+
+# plt.savefig("MSE vs Log FSS Violent.png")
 
 
 #### +5 min lead time
@@ -293,3 +293,86 @@ plt.ylabel('CSI Value')
 plt.legend()
 
 plt.savefig("Radar Model vs Radar & Satellite +30 CSI.png")
+
+
+# Define the light rain values with lead time
+x = [5, 15, 30]
+radar = [0.538, 0.854,0.293]
+satellite = [0.795, 0.259, 0.182]
+
+# Create the plot
+plt.figure(figsize=(8, 6))
+plt.plot(x, radar, marker='o', linestyle='-', color='b', label='Radar Model')
+plt.plot(x, satellite, marker='o', linestyle='--', color='g', label='Radar & Satellite Model')
+
+# Add titles and labels
+plt.title("Light Rain")
+plt.xlabel("Lead Time (min)")
+plt.ylabel("CSI Value")
+plt.legend()  # Show the legend
+plt.grid(True)
+# Adjust layout and save the plot
+plt.tight_layout()
+plt.savefig('light rian lead time.png')
+
+
+# Define the moderate rain values with lead time
+x = [5, 15, 30]
+radar = [0.677, 0.429,0.265]
+satellite = [0.713, 0.441, 0.202]
+
+# Create the plot
+plt.figure(figsize=(8, 6))
+plt.plot(x, radar, marker='o', linestyle='-', color='b', label='Radar Model')
+plt.plot(x, satellite, marker='o', linestyle='--', color='g', label='Radar & Satellite Model')
+
+# Add titles and labels
+plt.title("Moderate Rain")
+plt.xlabel("Lead Time (min)")
+plt.ylabel("CSI Value")
+plt.legend()  # Show the legend
+plt.grid(True)
+# Adjust layout and save the plot
+plt.tight_layout()
+plt.savefig('Moderate rian lead time.png')
+
+# Define the heavyrain values with lead time
+x = [5, 15, 30]
+radar = [0.672, 0.368, 0.14]
+satellite = [0.707, 0.379, 0.141]
+
+# Create the plot
+plt.figure(figsize=(8, 6))
+plt.plot(x, radar, marker='o', linestyle='-', color='b', label='Radar Model')
+plt.plot(x, satellite, marker='o', linestyle='--', color='g', label='Radar & Satellite Model')
+
+# Add titles and labels
+plt.title("Heavy rain")
+plt.xlabel("Lead Time (min)")
+plt.ylabel("CSI Value")
+plt.legend()  # Show the legend
+plt.grid(True)
+# Adjust layout and save the plot
+plt.tight_layout()
+plt.savefig('heavyrian lead time.png')
+
+
+# Define the heavyrain values with lead time
+x = [5, 15, 30]
+radar = [0.417, 0.03, 0.0]
+satellite = [0.452, 0.039, 0.003]
+
+# Create the plot
+plt.figure(figsize=(8, 6))
+plt.plot(x, radar, marker='o', linestyle='-', color='b', label='Radar Model')
+plt.plot(x, satellite, marker='o', linestyle='--', color='g', label='Radar & Satellite Model')
+
+# Add titles and labels
+plt.title("Violent rain")
+plt.xlabel("Lead Time (min)")
+plt.ylabel("CSI Value")
+plt.legend()  # Show the legend
+plt.grid(True)
+# Adjust layout and save the plot
+plt.tight_layout()
+plt.savefig('Violent rain lead time.png')

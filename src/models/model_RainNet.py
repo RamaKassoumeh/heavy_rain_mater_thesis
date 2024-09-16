@@ -157,13 +157,6 @@ def train_model(train_dataset,validate_data,model,file_name,inverse_trans,batch_
         batch_size=25,
         shuffle=True
     )
-    # for batch_num, (input, target) in enumerate(tqdm(validate_dataloader), 1):
-    #     continue
-    # test_loader = DataLoader(
-    #     dataset=test_data,
-    #     batch_size=25,
-    #     shuffle=True
-    # )
     class LogCoshLoss(nn.Module):
         def __init__(self):
             super(LogCoshLoss, self).__init__()
@@ -200,8 +193,6 @@ def train_model(train_dataset,validate_data,model,file_name,inverse_trans,batch_
             loss = torch.mean(loss)
             return loss
 
-    # Get a batch
-    # input, _ = next(iter(validate_dataloader))
     no_param=sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"number of parameters in the model is {no_param}")
     model=torch.nn.DataParallel(model)
@@ -265,11 +256,6 @@ def train_model(train_dataset,validate_data,model,file_name,inverse_trans,batch_
             output_flatten=output.flatten()
             target_flatten=target.flatten()
             
-            # loss_undefined_rain = criterion_undefined_rain(output_flatten, target_flatten)
-            # loss_light_rain = criterion_light_rain(output_flatten, target_flatten)
-            # loss_moderate_rain = criterion_moderate_rain(output_flatten, target_flatten)
-            # loss_heavy_rain = criterion_heavy_rain(output_flatten, target_flatten)
-            # loss=0.1*loss_undefined_rain+0.2*loss_light_rain+0.3*loss_moderate_rain+0.4*loss_heavy_rain
             loss = criterion(output_flatten, target_flatten)
             loss.backward()
             # Gradient clipping
@@ -307,7 +293,6 @@ def train_model(train_dataset,validate_data,model,file_name,inverse_trans,batch_
         with torch.no_grad():
             for batch_num, (input, target) in enumerate(tqdm(validate_dataloader), 1):
                 output = model(input)
-                # output=torch.round(output, decimals=3)
                 output_flatten=output.flatten()
                 target_flatten=target.flatten()
                 loss = criterion(output_flatten, target_flatten)
@@ -317,11 +302,9 @@ def train_model(train_dataset,validate_data,model,file_name,inverse_trans,batch_
                 mse,tp_values, fp_values, fn_values,numerator,denominator=calculate_metrics(target_img,output_img)
                 rmse = np.sqrt(mse)
                 for category in categories_threshold.keys():
-                    # csi_values_array[category].append(csi[category])
                     tp_values_array[category].append(tp_values[category])
                     fp_values_array[category].append(fp_values[category])
                     fn_values_array[category].append(fn_values[category])
-                    # fss_values_array[category].append(fss[category])
                     numerator_values_array[category].append(numerator[category])
                     denominator_values_array[category].append(denominator[category])
                 # Append RMSE to list
@@ -344,10 +327,7 @@ def train_model(train_dataset,validate_data,model,file_name,inverse_trans,batch_
         writer.add_scalars('Learning Rate', {'learning rate':current_lr}, epoch)
         
         checkpoint_path =f'{model_file_path}/{file_name}_model_checkpoint_{epoch}.pth'
-        # csi_means = {category: np.nanmean(csi_values[category]) for category in categories_threshold.keys()}
-        # fss_means = {category: np.nanmean(fss_values[category]) for category in categories_threshold.keys()}
         csi_means = {category: np.sum(tp_values_array[category])/np.sum(tp_values_array[category]+fp_values_array[category]+ fn_values_array[category]) for category in categories_threshold.keys()}
-        # average_fss = {category: np.nanmean(fss_values_array[category]) for category in categories_threshold.keys()}
         fss_means = {category: 1- (np.sum(numerator_values_array[category])/np.sum(denominator_values_array[category])) for category in categories_threshold.keys()}
         
         average_rmse = np.mean(rmse_values)
@@ -370,27 +350,3 @@ def train_model(train_dataset,validate_data,model,file_name,inverse_trans,batch_
 
     # Save the optimizer's state dictionary if needed
     torch.save(optim.state_dict(), f'{model_file_path}/{file_name}_optimizer.pth')
-
-    # Calculate RMSE for each image
-    rmse_values = []
-
-    output_file_path = f'{parparent}/results/{file_name}_results.txt'  # Specify the file path where you want to save the results
-
-    # save the results
-    with open(output_file_path, 'w') as file:
-        file.write(f"test on file {file_name}\n")
-        file.write(f"\nAverage RMSE across all images: {average_rmse}\n")
-        average_csi = {category: np.nanmean(csi_values[category]) for category in categories_threshold.keys()}
-        average_fss = {category: np.nanmean(fss_values[category]) for category in categories_threshold.keys()}
-
-        # Display the results
-        print("Average CSI for each category across all images:")
-        for category, avg_csi in average_csi.items():
-            print(f"{category}: {avg_csi}")
-            file.write(f"\nAverage CSI for category: {category}: {avg_csi}\n")
-        # Display the results
-        print("Average FSS for each category across all images:")
-        for category, avg_fss in average_fss.items():
-            print(f"{category}: {avg_fss}")
-            file.write(f"\nAverage FSS for category: {category}: {avg_fss}\n")
-        file.close()
