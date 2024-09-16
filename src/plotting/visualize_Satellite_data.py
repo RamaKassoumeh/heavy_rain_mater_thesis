@@ -21,8 +21,8 @@ import os
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
 train_dataset = RadarFilterRainNetDataset(
-    img_dir='/home/gouda/heavyrain/RadarData_summer_18_19/',
-    # sat_dir='/home/gouda/heavyrain/SatelliteData_summer_18_19/',
+    img_dir='/raid/heavyrain_dataset/heavyrain/RadarData_summer_18_19/',
+    # sat_dir='/raid/heavyrain_dataset/heavyrain/SatelliteData_summer_18_19/',
     transform=model_RainNet.radar_transform,
     inverse_transform=model_RainNet.radar_inverseTransform,
     # sat_transform=model_RainNet.satellite_transform,

@@ -103,8 +103,8 @@ def read_radar_spicific_image(radar_file_path):
             print(img_path)
             raise e
 
-radar_dir='/home/gouda/heavyrain/RadarData_summer_21/'
-radar_data_array=np.load('/home/gouda/heavyrain/RadarData_summer_21/radar_data_array.npy')
+radar_dir='/raid/heavyrain_dataset/heavyrain/RadarData_summer_21/'
+radar_data_array=np.load('/raid/heavyrain_dataset/heavyrain/RadarData_summer_21/radar_data_array.npy')
 min_values =[]
 max_values =[]
 radar_names = []
@@ -125,7 +125,7 @@ for indx in radar_data_array:
     #     break
     read_radar_image(indx)
 
-# radar_dir='/home/gouda/heavyrain/RadarData_summer_21/210714/hd2107141255.scu'
+# radar_dir='/raid/heavyrain_dataset/heavyrain/RadarData_summer_21/210714/hd2107141255.scu'
 # read_radar_spicific_image(radar_dir)
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 

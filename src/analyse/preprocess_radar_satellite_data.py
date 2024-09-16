@@ -5,8 +5,8 @@ import h5py
 
 from datetime import datetime, timedelta
 
-train_data = '/home/gouda/heavyrain/RadarData_summer_21/'
-satellite_data='/home/gouda/heavyrain/SatelliteData_summer_21/'
+train_data = '/raid/heavyrain_dataset/heavyrain/RadarData_summer_21/'
+satellite_data='/raid/heavyrain_dataset/heavyrain/SatelliteData_summer_21/'
 lead_time=5
 # create arrays
 accepted_events=[]

@@ -21,7 +21,7 @@ from torchvision import transforms
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
 
 train_dataset = RadarFilterRainNetSatelliteDataset(
-    img_dir='/home/gouda/heavyrain/RadarData_summer_20/',
+    img_dir='/raid/heavyrain_dataset/heavyrain/RadarData_summer_20/',
     sat_dir='/raid/heavyrain_dataset/SatelliteData_summer_20/',
     return_original=True,
     transform=model_RainNet.radar_transform,

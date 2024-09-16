@@ -30,13 +30,6 @@ validate_data = RadarFilterRainNetDataset(
     lead_time=lead_time
 )
 
-# test_data = RadarFilterRainNetDataset(
-#     img_dir='/home/gouda/heavyrain/RadarData_summer_20/',
-#     transform=model.radar_undefined_transform,
-#     inverse_transform=radar_inverse_transform
-# )
-
-
 modelRainnet=RainNet()
 file_name='radar_trainer_30M_RainNet_3d_Log_summer_30_min'
 model_RainNet.train_model(train_dataset,validate_data,modelRainnet,file_name,radar_inverse_transform,batch_size=300,advance_time=lead_time)

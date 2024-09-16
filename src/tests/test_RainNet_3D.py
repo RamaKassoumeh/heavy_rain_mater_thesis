@@ -14,7 +14,7 @@ import models.model_RainNet as model_RainNet
 
 import test_metrics
 radar_inverse_transform=model_RainNet.radar_inverseTransform
-test_file_name='/home/gouda/heavyrain/RadarData_summer_21_min_30/'
+test_file_name='/raid/heavyrain_dataset/heavyrain/RadarData_summer_21_min_30/'
 test_data = RadarFilterRainNetDataset(
     img_dir=test_file_name,
     transform=model_RainNet.radar_transform,
