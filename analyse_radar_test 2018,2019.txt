@@ -1,6 +1,0 @@
-undefined_count: 354358267, persentage is 6.242616127208415
-liglht_rain_count: 5293196701, persentage is 93.24855144454406
-moderate_rain_count: 24776317, persentage is 0.43647644342110986
-heavy_rain_count: 3862362, persentage is 0.06804199465823935
-extreme_rain_count: 244881, persentage is 0.0043139901681676415
-total_count: 5676438528
