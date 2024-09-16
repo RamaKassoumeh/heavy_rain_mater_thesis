@@ -1,7 +1,0 @@
-date: /home/gouda/heavyrain/RadarData_summer_21/
-undefined_count: 104381436, persentage is 3.6591554486454645
-liglht_rain_count: 2718383203, persentage is 95.29459537962056
-moderate_rain_count: 26004124, persentage is 0.9115905631136583
-heavy_rain_count: 3704341, persentage is 0.12985795245996412
-extreme_rain_count: 136944, persentage is 0.004800656160347368
-total_count: 2852610048
