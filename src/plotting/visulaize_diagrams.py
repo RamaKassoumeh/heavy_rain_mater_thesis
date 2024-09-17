@@ -1,6 +1,7 @@
 import sys
 import os
-
+import seaborn as sns
+import matplotlib as mpl
 import numpy as np
 current = os.path.dirname(os.path.realpath(__file__))
 parent = os.path.dirname(current)
@@ -454,3 +455,118 @@ plt.grid(True)
 # Adjust layout and save the plot
 plt.tight_layout()
 plt.savefig('Violent rain lead time.png')
+
+
+
+# Data based on the values of 5min radar model
+data = np.array([
+    [0.346, 0.883, 0.858, 0.889, 0.360],  # Window Size 1
+    [0.404, 0.919, 0.948, 0.962, 0.526],  # Window Size 3
+    [0.435, 0.931, 0.971, 0.980, 0.639],  # Window Size 5
+    [0.476, 0.946, 0.988, 0.992, 0.734]   # Window Size 10
+])
+
+# Define the categories and window sizes
+categories = ['Undefined', 'Light Rain', 'Moderate Rain', 'Heavy Rain', 'Violent Rain']
+window_sizes = ['1', '3', '5', '10']
+
+# Create the heatmap
+plt.figure(figsize=(8, 6))
+sns.heatmap(data, annot=True, cmap='coolwarm', xticklabels=categories, yticklabels=window_sizes, vmin=0, vmax=1, cbar=False)
+plt.xlabel('Categories', labelpad=15)
+plt.ylabel('neighborhood Size', labelpad=15)
+plt.savefig('FSS heatmap 5 min radar.png')
+
+
+# Data based on the values of 15min radar model
+data = np.array([
+    [0.52, 0.906, 0.72, 0.774, 0.0],   # Window Size 1
+    [0.604, 0.939, 0.818, 0.858, 0.0],  # Window Size 3
+    [0.644, 0.953, 0.866, 0.899, 0.0],  # Window Size 5
+    [0.703, 0.971, 0.927, 0.949, 0.0]   # Window Size 10
+])
+
+
+# Create the heatmap
+plt.figure(figsize=(8, 6))
+sns.heatmap(data, annot=True, cmap='coolwarm', xticklabels=categories, yticklabels=window_sizes, vmin=0, vmax=1, cbar=False)
+plt.xlabel('Categories', labelpad=15)
+plt.ylabel('neighborhood Size', labelpad=15)
+plt.savefig('FSS heatmap 15 min radar.png')
+
+# Data based on the values of 30min radar model
+data = np.array([
+    [0.639, 0.896, 0.598, 0.586, 0.0],   # Window Size 1
+    [0.687, 0.921, 0.681, 0.662, 0.0],  # Window Size 3
+    [0.703, 0.934, 0.73, 0.708, 0.0],   # Window Size 5
+    [0.725, 0.953, 0.813, 0.783, 0.0]   # Window Size 10
+])
+
+# Create the heatmap
+plt.figure(figsize=(8, 6))
+sns.heatmap(data, annot=True, cmap='coolwarm', xticklabels=categories, yticklabels=window_sizes, vmin=0, vmax=1, cbar=False)
+plt.xlabel('Categories', labelpad=15)
+plt.ylabel('neighborhood Size', labelpad=15)
+plt.savefig('FSS heatmap 30 min radar.png')
+
+# Data based on the values of 5min radar and satllite model
+
+data = np.array([
+    [0.461, 0.926, 0.881, 0.902, 0.554],   # Window Size 1
+    [0.557, 0.957, 0.962, 0.97, 0.754],    # Window Size 3
+    [0.611, 0.967, 0.979, 0.984, 0.826],   # Window Size 5
+    [0.684, 0.978, 0.992, 0.994, 0.852]    # Window Size 10
+])
+
+# Create the heatmap
+plt.figure(figsize=(8, 6))
+sns.heatmap(data, annot=True, cmap='coolwarm', xticklabels=categories, yticklabels=window_sizes, vmin=0, vmax=1, cbar=False)
+plt.xlabel('Categories', labelpad=15)
+plt.ylabel('neighborhood Size', labelpad=15)
+plt.savefig('FSS heatmap 5 min radar_satellite.png')
+
+# Data based on the values of 15min radar and satllite model
+
+data = np.array([
+    [0.47, 0.9, 0.741, 0.783, 0.0],   # Window Size 1
+    [0.506, 0.928, 0.841, 0.869, 0.0],  # Window Size 3
+    [0.524, 0.94, 0.888, 0.91, 0.0],   # Window Size 5
+    [0.547, 0.955, 0.942, 0.957, 0.0]  # Window Size 10
+])
+
+# Create the heatmap
+plt.figure(figsize=(8, 6))
+sns.heatmap(data, annot=True, cmap='coolwarm', xticklabels=categories, yticklabels=window_sizes, vmin=0, vmax=1, cbar=False)
+plt.xlabel('Categories', labelpad=15)
+plt.ylabel('neighborhood Size', labelpad=15)
+plt.savefig('FSS heatmap 15 min radar_satellite.png')
+
+# Data based on the values of 30min radar and satllite model
+
+data = np.array([
+    [0.367, 0.797, 0.525, 0.591, 0.0],   # Window Size 1
+    [0.388, 0.829, 0.609, 0.664, 0.0],   # Window Size 3
+    [0.399, 0.847, 0.663, 0.71, 0.0],    # Window Size 5
+    [0.417, 0.881, 0.762, 0.795, 0.0]    # Window Size 10
+])
+
+# Create the heatmap
+plt.figure(figsize=(8, 6))
+sns.heatmap(data, annot=True, cmap='coolwarm', xticklabels=categories, yticklabels=window_sizes, vmin=0, vmax=1, cbar=False)
+plt.xlabel('Categories', labelpad=15)
+plt.ylabel('neighborhood Size', labelpad=15)
+plt.savefig('FSS heatmap 30 min radar_satellite.png')
+
+# Create a color map and normalization between 0 and 1
+cmap = plt.get_cmap('coolwarm')
+norm = mpl.colors.Normalize(vmin=0, vmax=1)
+
+# Create a figure and a color bar
+fig, ax = plt.subplots(figsize=(6, 1))
+fig.subplots_adjust(bottom=0.5)
+
+# Create the color bar based on the color map and normalization
+cb = mpl.colorbar.ColorbarBase(ax, cmap=cmap, norm=norm, orientation='horizontal')
+
+# Set the label for the color bar
+plt.savefig('FSS heatmap Value.png')

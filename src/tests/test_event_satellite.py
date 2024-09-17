@@ -206,38 +206,42 @@ spatial_errors = []
 neighborhood_size=3
 model.eval()
 test_file_name='../RadarData_summer_21/210714/hd2107141255.scu'
-with torch.no_grad():
-    input, target = getitem(test_file_name)
-    output = model(input)
-    actual_img=inverseTransform(target)
-    predicted_img=inverseTransform(output)
-    input=inverseTransform(input)
-    plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,actual_img[0,0],predicted_img[0,0]], 2, 4,1,1,'test',model_file_name,advance_time=lead_time)
-        
-    actual_flat = actual_img.flatten()
-    predicted_flat = predicted_img.flatten()
-    mse,csi_values,fss_values=calculate_metrics_one_value(actual_img,predicted_img)  
-    rmse = np.sqrt(mse)
-        
-print(f"Average RMSE across all images: {rmse}")
-with open(output_file_path, 'w') as file:
-    file.write(f"test on event {test_file_name}\n")
 
-    file.write(f"\nAverage RMSE across all images: {round(rmse,3)}\n")
+for neighborhood_window in [1,3,5,10]:
+    output_file_path = f'{parparent}/results/{model_file_name}_test_results_{timestamp}_{neighborhood_window}.txt'  # Specify the file path where you want to save the results
+    
+    with torch.no_grad():
+        input, target = getitem(test_file_name)
+        output = model(input)
+        actual_img=inverseTransform(target)
+        predicted_img=inverseTransform(output)
+        input=inverseTransform(input)
+        plot_images([input[0,input.shape[1]-1],input[0,input.shape[1]-2],input[0,input.shape[1]-3],input[0,input.shape[1]-4],input[0,input.shape[1]-5],input[0,input.shape[1]-6] ,actual_img[0,0],predicted_img[0,0]], 2, 4,1,1,'test',model_file_name,advance_time=lead_time)
+            
+        actual_flat = actual_img.flatten()
+        predicted_flat = predicted_img.flatten()
+        mse,csi_values,fss_values=calculate_metrics_one_value(actual_img,predicted_img,neighborhood_window)  
+        rmse = np.sqrt(mse)
+            
+    print(f"Average RMSE across all images: {rmse}")
+    with open(output_file_path, 'w') as file:
+        file.write(f"test on event {test_file_name}\n")
 
-    # Calculate the average CSI for each category across all images
-    average_csi = {category: np.nanmean(csi_values[category]) for category in categories_threshold.keys()}
-    # Calculate the average FSS for each category across all images
-    average_fss = {category: np.nanmean(fss_values[category]) for category in categories_threshold.keys()}
+        file.write(f"\nAverage RMSE across all images: {round(rmse,3)}\n")
 
-    # Display the results
-    print("Average CSI for each category across all images:")
-    for category, avg_csi in average_csi.items():
-        print(f"{category}: {round(avg_csi,3)}")
-        file.write(f"\nAverage CSI for category: {category}: {round(avg_csi,3)}\n")
-    # Display the results
-    print("Average FSS for each category across all images:")
-    for category, avg_fss in average_fss.items():
-        print(f"{category}: {round(avg_fss,3)}")
-        file.write(f"\nAverage FSS for category: {category}: {round(avg_fss,3)}\n")
-    file.close()
+        # Calculate the average CSI for each category across all images
+        average_csi = {category: np.nanmean(csi_values[category]) for category in categories_threshold.keys()}
+        # Calculate the average FSS for each category across all images
+        average_fss = {category: np.nanmean(fss_values[category]) for category in categories_threshold.keys()}
+
+        # Display the results
+        print("Average CSI for each category across all images:")
+        for category, avg_csi in average_csi.items():
+            print(f"{category}: {round(avg_csi,3)}")
+            file.write(f"\nAverage CSI for category: {category}: {round(avg_csi,3)}\n")
+        # Display the results
+        print("Average FSS for each category across all images:")
+        for category, avg_fss in average_fss.items():
+            print(f"{category}: {round(avg_fss,3)}")
+            file.write(f"\nAverage FSS for category: {category}: {round(avg_fss,3)}\n")
+        file.close()
