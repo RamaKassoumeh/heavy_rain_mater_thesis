@@ -1,3 +1,0 @@
-test on file /raid/heavyrain_dataset/RadarData_summer_20/
-
-Average RMSE across all images: 663.927978515625
