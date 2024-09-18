@@ -458,6 +458,7 @@ plt.savefig('Violent rain lead time.png')
 
 
 
+
 # Data based on the values of 5min radar model
 data = np.array([
     [0.346, 0.883, 0.858, 0.889, 0.360],  # Window Size 1
@@ -467,14 +468,17 @@ data = np.array([
 ])
 
 # Define the categories and window sizes
-categories = ['Undefined', 'Light Rain', 'Moderate Rain', 'Heavy Rain', 'Violent Rain']
+categories = ['Undefined', 'Light', 'Moderate', 'Heavy', 'Violent']
 window_sizes = ['1', '3', '5', '10']
 
 # Create the heatmap
-plt.figure(figsize=(8, 6))
-sns.heatmap(data, annot=True, cmap='coolwarm', xticklabels=categories, yticklabels=window_sizes, vmin=0, vmax=1, cbar=False)
-plt.xlabel('Categories', labelpad=15)
-plt.ylabel('neighborhood Size', labelpad=15)
+plt.figure(figsize=(9, 9))
+sns.heatmap(data, annot=True, cmap='coolwarm', xticklabels=categories, yticklabels=window_sizes, vmin=0, vmax=1, cbar=False, annot_kws={"size": 25})
+plt.xlabel('Categories',labelpad=15, fontsize=18)
+plt.ylabel('Neighborhood Size (Spatial Scale, km)',labelpad=15, fontsize=18)
+plt.xticks(fontsize=16)  # Increase size of xticklabels
+plt.yticks(fontsize=16)  # Increase size of yticklabels
+plt.xticks(rotation=45, ha='right')  # Rotate x labels 45 degrees and set alignment
 plt.savefig('FSS heatmap 5 min radar.png')
 
 
@@ -488,10 +492,13 @@ data = np.array([
 
 
 # Create the heatmap
-plt.figure(figsize=(8, 6))
-sns.heatmap(data, annot=True, cmap='coolwarm', xticklabels=categories, yticklabels=window_sizes, vmin=0, vmax=1, cbar=False)
-plt.xlabel('Categories', labelpad=15)
-plt.ylabel('neighborhood Size', labelpad=15)
+plt.figure(figsize=(9, 9))
+sns.heatmap(data, annot=True, cmap='coolwarm', xticklabels=categories, yticklabels=window_sizes, vmin=0, vmax=1, cbar=False, annot_kws={"size": 25})
+plt.xlabel('Categories',labelpad=15, fontsize=18)
+plt.ylabel('Neighborhood Size (Spatial Scale, km)',labelpad=15, fontsize=18)
+plt.xticks(fontsize=16)  # Increase size of xticklabels
+plt.yticks(fontsize=16)  # Increase size of yticklabels
+plt.xticks(rotation=45, ha='right')  # Rotate x labels 45 degrees and set alignment
 plt.savefig('FSS heatmap 15 min radar.png')
 
 # Data based on the values of 30min radar model
@@ -503,10 +510,12 @@ data = np.array([
 ])
 
 # Create the heatmap
-plt.figure(figsize=(8, 6))
-sns.heatmap(data, annot=True, cmap='coolwarm', xticklabels=categories, yticklabels=window_sizes, vmin=0, vmax=1, cbar=False)
-plt.xlabel('Categories', labelpad=15)
-plt.ylabel('neighborhood Size', labelpad=15)
+plt.figure(figsize=(9, 9))
+sns.heatmap(data, annot=True, cmap='coolwarm', xticklabels=categories, yticklabels=window_sizes, vmin=0, vmax=1, cbar=False, annot_kws={"size": 25})
+plt.ylabel('Neighborhood Size (Spatial Scale, km)',labelpad=15, fontsize=18)
+plt.xticks(fontsize=16)  # Increase size of xticklabels
+plt.yticks(fontsize=16)  # Increase size of yticklabels
+plt.xticks(rotation=45, ha='right')  # Rotate x labels 45 degrees and set alignment
 plt.savefig('FSS heatmap 30 min radar.png')
 
 # Data based on the values of 5min radar and satllite model
@@ -519,10 +528,13 @@ data = np.array([
 ])
 
 # Create the heatmap
-plt.figure(figsize=(8, 6))
-sns.heatmap(data, annot=True, cmap='coolwarm', xticklabels=categories, yticklabels=window_sizes, vmin=0, vmax=1, cbar=False)
-plt.xlabel('Categories', labelpad=15)
-plt.ylabel('neighborhood Size', labelpad=15)
+plt.figure(figsize=(9, 9))
+sns.heatmap(data, annot=True, cmap='coolwarm', xticklabels=categories, yticklabels=window_sizes, vmin=0, vmax=1, cbar=False, annot_kws={"size": 25})
+plt.xlabel('Categories',labelpad=15, fontsize=18)
+plt.ylabel('Neighborhood Size (Spatial Scale, km)',labelpad=15, fontsize=18)
+plt.xticks(fontsize=16)  # Increase size of xticklabels
+plt.yticks(fontsize=16)  # Increase size of yticklabels
+plt.xticks(rotation=45, ha='right')  # Rotate x labels 45 degrees and set alignment
 plt.savefig('FSS heatmap 5 min radar_satellite.png')
 
 # Data based on the values of 15min radar and satllite model
@@ -535,10 +547,13 @@ data = np.array([
 ])
 
 # Create the heatmap
-plt.figure(figsize=(8, 6))
-sns.heatmap(data, annot=True, cmap='coolwarm', xticklabels=categories, yticklabels=window_sizes, vmin=0, vmax=1, cbar=False)
-plt.xlabel('Categories', labelpad=15)
-plt.ylabel('neighborhood Size', labelpad=15)
+plt.figure(figsize=(9, 9))
+sns.heatmap(data, annot=True, cmap='coolwarm', xticklabels=categories, yticklabels=window_sizes, vmin=0, vmax=1, cbar=False, annot_kws={"size": 25})
+plt.xlabel('Categories',labelpad=15, fontsize=18)
+plt.ylabel('Neighborhood Size (Spatial Scale, km)',labelpad=15, fontsize=18)
+plt.xticks(fontsize=16)  # Increase size of xticklabels
+plt.yticks(fontsize=16)  # Increase size of yticklabels
+plt.xticks(rotation=45, ha='right')  # Rotate x labels 45 degrees and set alignment
 plt.savefig('FSS heatmap 15 min radar_satellite.png')
 
 # Data based on the values of 30min radar and satllite model
@@ -551,10 +566,13 @@ data = np.array([
 ])
 
 # Create the heatmap
-plt.figure(figsize=(8, 6))
-sns.heatmap(data, annot=True, cmap='coolwarm', xticklabels=categories, yticklabels=window_sizes, vmin=0, vmax=1, cbar=False)
-plt.xlabel('Categories', labelpad=15)
-plt.ylabel('neighborhood Size', labelpad=15)
+plt.figure(figsize=(9, 9))
+sns.heatmap(data, annot=True, cmap='coolwarm', xticklabels=categories, yticklabels=window_sizes, vmin=0, vmax=1, cbar=False, annot_kws={"size": 25})
+plt.xlabel('Categories',labelpad=15, fontsize=18)
+plt.ylabel('Neighborhood Size (Spatial Scale, km)',labelpad=15, fontsize=18)
+plt.xticks(fontsize=16)  # Increase size of xticklabels
+plt.yticks(fontsize=16)  # Increase size of yticklabels
+plt.xticks(rotation=45, ha='right')  # Rotate x labels 45 degrees and set alignment
 plt.savefig('FSS heatmap 30 min radar_satellite.png')
 
 # Create a color map and normalization between 0 and 1
@@ -562,11 +580,12 @@ cmap = plt.get_cmap('coolwarm')
 norm = mpl.colors.Normalize(vmin=0, vmax=1)
 
 # Create a figure and a color bar
-fig, ax = plt.subplots(figsize=(6, 1))
-fig.subplots_adjust(bottom=0.5)
+fig, ax = plt.subplots(figsize=(1, 6))  # Adjust the size for the vertical bar
+fig.subplots_adjust(right=0.5)
 
 # Create the color bar based on the color map and normalization
-cb = mpl.colorbar.ColorbarBase(ax, cmap=cmap, norm=norm, orientation='horizontal')
+cb = mpl.colorbar.ColorbarBase(ax, cmap=cmap, norm=norm, orientation='vertical')
 
 # Set the label for the color bar
+plt.xticks(rotation=45, ha='right')  # Rotate x labels 45 degrees and set alignment
 plt.savefig('FSS heatmap Value.png')
