@@ -1,8 +1,12 @@
-# Modifed RainNet: a convolutional neural network for radar & satellite-based precipitation nowcasting (Master Thesis)
+# Modifed RainNet: a convolutional neural network for radar & satellite-based precipitation nowcasting
 
 ## Brief description
 
 We introduce Modified RainNet, a convolutional neural network for radar and satellite-based precipitation nowcasting. RainNet is trained to predict continuous precipitation intensities with lead times of 5, 15, and 30 minutes, using several years of quality-controlled weather radar and satellite composites. The radar data is provided by Hydro & Meteo company, and the satellite data is sourced from EUMETSAT. The data will be made available online once the HeavyRain project is completed.
+
+## Dataset
+
+The dataset will be made publicly available soon.
 
 ## Architecture
 
@@ -47,3 +51,5 @@ We have two main models:
 
 ### For Plotting:
 - All plotting scripts are located in the folder `src/plotting`.
+
+
